@@ -13,6 +13,17 @@ structure_standard_pack/
 └── README.md         # file này — tổng quan pack
 ```
 
+## Vì sao dùng prefix số?
+
+Prefix số giúp pack có thứ tự đọc ổn định và còn chỗ mở rộng:
+
+- `00-core/`: nền tảng bắt buộc đọc trước.
+- `01-prompts/`: prompt hỗ trợ AI áp chuẩn.
+- `02-checklists/`: checklist dùng khi migrate/register/deploy.
+- `10-templates/`: thư viện template thật. Đặt ở `10` để tách khỏi phần policy/checklist phía trước và chừa `03-09` cho các chuẩn bổ sung sau này.
+
+Không nên đổi `10-templates` thành tên không đánh số nếu pack còn tiếp tục lớn lên, vì prefix giúp người dùng nhìn tree là biết luồng đọc.
+
 ## Mục đích từng thư mục
 
 ### `00-core/` — chuẩn lõi (đọc trước tiên)
@@ -27,6 +38,7 @@ structure_standard_pack/
 ### `02-checklists/` — checklist migrate
 
 - [`MIGRATION_CHECKLIST.md`](02-checklists/MIGRATION_CHECKLIST.md) — checklist 7 bước để chuyển repo cũ lộn xộn sang chuẩn mới mà không over-engineer.
+- [`PROJECT_REGISTRATION_CHECKLIST.md`](02-checklists/PROJECT_REGISTRATION_CHECKLIST.md) — checklist đăng ký project lên Linux server nhiều dự án: scale profile, port/domain registry, Docker network, shared DB/Redis, backup/log/healthcheck.
 
 ### `10-templates/` — thư viện template thật
 
@@ -47,13 +59,18 @@ Tra đầy đủ mapping tại [`00-core/TEMPLATE_LIBRARY_INDEX.md`](00-core/TEM
 
 Convention phụ: `sidecar/` (optional) cho binary prebuilt đi kèm app — xem [`STRUCTURE_STANDARD_CORE.md`](00-core/STRUCTURE_STANDARD_CORE.md) section 5.
 
+Ràng buộc stack-specific: **`web/fullstack/go-vue` bắt buộc Docker + apps/ layout + backup script + tách admin/client FE + production baseline** — xem [`STRUCTURE_STANDARD_CORE.md`](00-core/STRUCTURE_STANDARD_CORE.md) section 6 và [`TEMPLATE_LIBRARY_INDEX.md`](00-core/TEMPLATE_LIBRARY_INDEX.md).
+
+Tài liệu hạ tầng riêng, script deploy riêng, hoặc chuẩn server có thông tin nội bộ không nên được link từ README public của pack. Nếu cần dùng nội bộ, giữ riêng và chỉ trích xuất requirement trung tính vào checklist.
+
 ## Cách dùng nhanh
 
 1. Đọc [`00-core/STRUCTURE_STANDARD_CORE.md`](00-core/STRUCTURE_STANDARD_CORE.md) để hiểu nguyên tắc và schema.
 2. Đọc [`00-core/TEMPLATE_LIBRARY_INDEX.md`](00-core/TEMPLATE_LIBRARY_INDEX.md) để tra template theo input dự án.
 3. Mở template tương ứng trong [`10-templates/`](10-templates/), chọn `simple.md` hoặc `structured.md`.
-4. Nếu là repo cũ, làm theo [`02-checklists/MIGRATION_CHECKLIST.md`](02-checklists/MIGRATION_CHECKLIST.md).
-5. Nếu dùng Claude Code / AI, đưa kèm [`01-prompts/PROMPT_CLAUDE_CODE_STRUCTURE_SELECTION.md`](01-prompts/PROMPT_CLAUDE_CODE_STRUCTURE_SELECTION.md) + 2 file core ở bước 1–2.
+4. Nếu deploy lên Linux server nhiều dự án, làm thêm [`02-checklists/PROJECT_REGISTRATION_CHECKLIST.md`](02-checklists/PROJECT_REGISTRATION_CHECKLIST.md) để đăng ký project, port, domain, network, DB/Redis, backup/log.
+5. Nếu là repo cũ, làm theo [`02-checklists/MIGRATION_CHECKLIST.md`](02-checklists/MIGRATION_CHECKLIST.md).
+6. Nếu dùng Claude Code / AI, đưa kèm [`01-prompts/PROMPT_CLAUDE_CODE_STRUCTURE_SELECTION.md`](01-prompts/PROMPT_CLAUDE_CODE_STRUCTURE_SELECTION.md) + 2 file core ở bước 1–2.
 
 ## Nguyên tắc nền (tóm tắt)
 
@@ -61,6 +78,7 @@ Convention phụ: `sidecar/` (optional) cho binary prebuilt đi kèm app — xem
 - Không khóa cứng 1 stack mặc định trong chuẩn gốc.
 - Không mặc định monorepo, contracts-first, codegen, CODEOWNERS.
 - Chỉ support những gì pack hiện tại đã có template thật; case ngoài scope thì dùng semantic rules từ core, không tự bịa "na ná".
+- Với `web/fullstack/go-vue`, nếu là server/product đi dài thì ưu tiên `structured.md`; `simple.md` là simple code layout, không phải simple operations.
 
 ## Metadata
 

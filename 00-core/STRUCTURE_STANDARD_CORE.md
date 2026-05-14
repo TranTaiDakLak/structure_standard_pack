@@ -93,6 +93,20 @@ Nếu case nằm ngoài scope:
 - `current_services`
 - `shared_code_real`
 
+Nếu deploy lên Linux server nhiều dự án, cần thêm nhóm input vận hành:
+
+- `project_name`
+- `server_root` — ví dụ `/opt/apps/<project-name>` hoặc path chuẩn nội bộ
+- `scale_profile` — `S1`, `S2`, `S3`
+- `domains`
+- `services`
+- `container_ports`
+- `host_ports`
+- `db_mode` — `none`, `shared`, `dedicated`, `external`
+- `redis_mode` — `none`, `shared`, `dedicated`, `external`
+- `resource_limits`
+- `backup_scope`
+
 ## Gợi ý giá trị
 
 ### `team_size`
@@ -108,6 +122,7 @@ Nếu case nằm ngoài scope:
 
 ### `deploy_target`
 - `docker`
+- `linux-daemon`
 - `iis`
 - `windows-service`
 - `static-hosting`
@@ -174,7 +189,7 @@ Các vùng ý nghĩa sau phải rõ trong repo, bất kể stack nào.
 | Vùng | Ý nghĩa |
 |---|---|
 | `docs/` | tài liệu markdown, flow, ghi chú kỹ thuật |
-| `infra/` | docker, iis, nginx, deployment config, installer |
+| `infra/` | docker, iis, nginx, systemd, deployment config, installer (chọn sub-folder theo deploy_target) |
 | `scripts/` | script hỗ trợ run/dev/build/migrate |
 | `config/` | file mẫu cấu hình, không chứa secret thật |
 | `build/` | output, artifact, luôn gitignore |
@@ -213,6 +228,25 @@ Các vùng ý nghĩa sau phải rõ trong repo, bất kể stack nào.
 - `.github/`
 - `tools/`
 - `sidecar/`
+
+### Quy ước `infra/` theo `deploy_target`
+
+Sub-folder dưới `infra/` chọn theo môi trường deploy thật, không phải bê hết:
+
+| deploy_target | Sub-folder thường có | Ghi chú |
+|---|---|---|
+| `docker` | `infra/docker/` | Dockerfile (multi-stage), docker-compose.yml |
+| `linux-daemon` | `infra/systemd/`, `infra/nginx/` | unit file `*.service`, reverse proxy config |
+| `iis` | `infra/iis/` | web.config, applicationHost mẫu |
+| `windows-service` | `infra/service-install/` | `sc.exe` script / `kardianos/service` install script |
+| `static-hosting` | (thường không cần `infra/`) | hosting config nằm ở provider |
+| `desktop-installer` | `infra/installer/` | Inno Setup / WiX / MSIX config |
+
+Rule:
+
+- Mỗi binary có unit file `systemd/` riêng (api.service, worker.service), không gom 1 unit cho nhiều process.
+- Dockerfile per-binary nếu khác base image hoặc cần CMD khác; gom 1 Dockerfile multi-target nếu chung base.
+- Không commit secret thật vào `infra/`; dùng `*.example.*` hoặc `.env.example`.
 
 ### Quy ước `sidecar/`
 
@@ -268,6 +302,17 @@ Rule:
 ### Web frontend — React/Vite
 - simple: `src/components`, `pages`, `routes`, `services`
 - structured: thêm `features`, `hooks`, `lib`, `types`
+
+### Web fullstack — Go + Vue
+- simple: `apps/{api,admin-web}/` (+ optional `apps/client-web/`, optional `apps/api/cmd/worker/`)
+- structured: `apps/api/{cmd,internal/{app,domain,usecase,adapter/{http,repository,messaging,external},worker,job,config},migrations}` + `apps/{admin-web,client-web}/`
+- **Bắt buộc với go-vue**:
+  - Docker — mỗi app có `Dockerfile` + app-level `docker-compose.yml`; thêm `infra/compose/dev.yml` cho dev all-in-one và `infra/compose/prod.yml` làm production source of truth khi product có nhiều app
+  - Backup — `scripts/{backup,restore}.sh` cho `apps/*/storage/` + DB dump
+  - FE tách admin và client thành 2 app riêng dưới `apps/` (nếu sản phẩm có cả 2 mặt)
+  - Worker là optional binary trong cùng `apps/api/` Go module, không tách app riêng
+  - Production baseline — health/readiness, migration script, deploy/rollback script, runbook, logging/metrics, security notes
+- Web fullstack — .NET + Vue / Node + React không bị ràng buộc Docker bắt buộc (có thể IIS/Windows hoặc Docker).
 
 ### Desktop — Wails + Go + Vue
 - simple: `main.go`, `app.go`, `backend/`, `frontend/`
@@ -367,6 +412,15 @@ Khi AI áp chuẩn này cho một dự án, phải output theo thứ tự:
 6. `Migration notes`
 7. `Assumptions`
 8. `Risks`
+
+Nếu deploy lên Linux server nhiều dự án, output thêm:
+
+9. `Server registration`
+10. `Scale profile`
+11. `Port registry entries`
+12. `Domain registry entries`
+13. `Compose/network requirements`
+14. `Backup/log/healthcheck requirements`
 
 ## Metadata
 

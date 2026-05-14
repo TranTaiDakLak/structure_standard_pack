@@ -56,6 +56,14 @@ Sau đó chọn mode:
 - cần boundary rõ
 - simple bắt đầu khó tìm code
 
+### Ràng buộc riêng cho `web/fullstack/go-vue`
+
+- **Docker bắt buộc** — không có path bypass. Mỗi app trong `apps/` có Dockerfile + app-level docker-compose.yml. Dev local qua `infra/compose/dev.yml`; production nhiều app dùng `infra/compose/prod.yml` làm source of truth.
+- **FE tách admin và client** — `apps/admin-web/` + (optional) `apps/client-web/`.
+- **Worker là optional binary**, không phải app_shape riêng. Khi cần, thêm `apps/api/cmd/worker/main.go` + `apps/api/worker/`, share `service/` (1 Go module, 2 binary). Nếu worker thật sự độc lập (khác team, khác cadence, không share `service/`) → tách thành repo `service/go-service` riêng.
+- **Backup mandatory** — `scripts/{backup,restore}.sh` cho `apps/*/storage/` + DB dump.
+- **Production baseline mandatory** — health/readiness, migration script, deploy/rollback script, runbook, logging/metrics, security notes.
+
 ---
 
 ## 4. Quy tắc dùng template
