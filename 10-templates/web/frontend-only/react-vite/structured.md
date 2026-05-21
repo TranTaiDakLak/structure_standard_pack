@@ -51,3 +51,7 @@
 - tránh để `components/` và `features/` chồng chéo
 - không biến `lib/` thành thùng rác
 - structured là để code dễ tìm hơn
+- Feature nên chứa component/hook/api riêng nếu chỉ dùng trong feature đó.
+- Config dùng `.env.example` và biến `VITE_*`; không hardcode endpoint production.
+- Unit test feature/hook; e2e cho flow chính; build output luôn gitignore.
+- Nếu feature layer chỉ là folder rỗng, quay lại `simple.md`.

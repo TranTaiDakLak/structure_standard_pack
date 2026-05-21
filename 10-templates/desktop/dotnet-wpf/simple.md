@@ -33,7 +33,8 @@
 │   └── <AppName>.Tests/            # unit test project
 ├── <AppName>.sln                   # solution
 ├── Directory.Build.props           # thiết lập build chung
-└── README.md                       # hướng dẫn repo
+├── README.md                       # hướng dẫn repo
+└── .gitignore                      # bỏ qua bin/, obj/, build/, *.user
 ```
 
 ## Vai trò thư mục
@@ -48,3 +49,6 @@
 - View không ôm business logic nặng
 - Service không bị dính chặt vào View
 - `build/` và installer output phải gitignore
+- Config mẫu và resource dùng chung phải nằm ở chỗ rõ, không rải trong từng View.
+- Test ưu tiên ViewModel/Service; UI automation chỉ thêm khi workflow thật sự quan trọng.
+- Nếu nhiều module nghiệp vụ hoặc nhiều integration ngoài, nâng sang `structured.md`.

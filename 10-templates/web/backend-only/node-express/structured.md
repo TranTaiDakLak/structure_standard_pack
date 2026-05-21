@@ -45,3 +45,7 @@
 - module không phụ thuộc lung tung vào module khác
 - `shared/` không thành bãi rác
 - structured là để dễ tìm code, không phải để thêm ceremony
+- Module nên expose boundary rõ, không import sâu vào file nội bộ của module khác.
+- API production nên có healthcheck, request id, validation, error middleware và secret loading rõ.
+- Unit test module/service; integration test route/DB quan trọng.
+- Nếu chỉ có vài route nhỏ, quay lại `simple.md`.

@@ -5,7 +5,7 @@
 - Dự án chạy ngầm, không có UI, không phục vụ HTTP công khai (nếu có API thì là endpoint quản trị nội bộ)
 - Cover được 3 use case phổ biến trong 1 cấu trúc:
   - Cài đặt **Windows Service** (auto-start khi boot, quản lý qua SCM)
-  - Chạy **background worker** trong Docker/Linux daemon
+  - Chạy **background worker** dạng Linux daemon (systemd)
   - Chạy **scheduled job** (Quartz.NET / Hangfire, hoặc exe kích bởi Task Scheduler)
 - Team .NET muốn tận dụng `IHostedService` / `BackgroundService` chuẩn MS
 
@@ -14,8 +14,17 @@
 - `simple.md`: dùng khi 1–2 worker, 1 project duy nhất
 - `structured.md`: dùng khi có nhiều worker, domain lớn, cần tách lớp
 
+## Baseline lâu dài
+
+- Worker loop chỉ orchestrate; nghiệp vụ nằm trong Service/Application.
+- Mọi loop dài phải tôn trọng cancellation, có logging chuẩn, retry/backoff rõ.
+- Config mẫu không chứa secret; secret production đi qua env, secret store, hoặc cơ chế deploy.
+- Deploy phải nói rõ chạy dạng Windows Service, Linux daemon (systemd), hay scheduled exe.
+- Health/metrics/admin endpoint nếu có chỉ là nội bộ và không làm đổi `delivery_type`.
+
 ## Ghi chú
 
 - Với .NET Framework cũ (4.x) dùng `ServiceBase`: vẫn theo cấu trúc simple nhưng thay `Workers/` bằng class kế thừa `ServiceBase` và project `OutputType=WinExe`. Pack không ship template riêng cho legacy — tận dụng simple + ghi chú trong repo.
 - Nếu service cần expose HTTP endpoint nội bộ (health check, trigger job manual): thêm `Minimal API` trong `Program.cs`, KHÔNG tách thành delivery_type `web`.
-- Deploy target khuyến nghị: `windows-service` (sc.exe / nssm), `docker` (Linux container), hoặc exe đơn thuần kích bởi Task Scheduler.
+- Quyết định "service hay web" khi app vừa chạy nền vừa có HTTP: xem [`STRUCTURE_STANDARD_CORE.md`](../../../00-core/STRUCTURE_STANDARD_CORE.md) mục "Ranh giới Service ↔ Web".
+- Deploy target khuyến nghị: `windows-service` (sc.exe / nssm), `linux-daemon` (systemd), hoặc exe đơn thuần kích bởi Task Scheduler.

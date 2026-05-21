@@ -49,3 +49,7 @@
 - `cmd/*/main.go` chỉ wiring
 - domain không biết DB/HTTP framework
 - đừng tạo package con quá vụn
+- `usecase` đi qua interface cho persistence/external dependency; adapter implement.
+- Unit test domain/usecase; integration test repository/HTTP quan trọng.
+- API production nên có health/readiness, migration script, structured log, graceful shutdown.
+- Nếu `internal/` chỉ có vài file mỏng, dùng lại `simple.md`.

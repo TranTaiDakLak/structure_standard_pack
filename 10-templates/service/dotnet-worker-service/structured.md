@@ -61,3 +61,6 @@
 - Job handler (Quartz/Hangfire) cũng chỉ là 1 lớp mỏng gọi vào `Application.UseCases`.
 - Structured Worker Service KHÔNG có nghĩa là enterprise nặng — vẫn giữ tinh thần gọn.
 - Nếu chưa đủ lớn để justify 4 project → quay về simple.
+- Unit test Domain/Application; integration test Infrastructure có DB/HTTP/queue thật hoặc test container.
+- Retry/backoff, idempotency, lock/concurrency phải ghi rõ cho worker/job có tác động dữ liệu.
+- Deploy target phải có script install/run và log path rõ.

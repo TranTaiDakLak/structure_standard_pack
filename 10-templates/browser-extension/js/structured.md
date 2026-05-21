@@ -49,3 +49,6 @@
 - không để `shared/` thành thùng rác
 - browser API wrappers nên đi qua `platform/`
 - feature logic không rải khắp background/content/popup
+- Permission trong `manifest.json` phải review theo từng feature, không xin quyền rộng mặc định.
+- Test unit cho `features/` và `platform/`; integration test message flow quan trọng.
+- Build/package artifact phải tái lập được, không commit output extension store.

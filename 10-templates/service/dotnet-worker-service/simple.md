@@ -38,7 +38,7 @@
 - `Jobs/`: nếu dùng Quartz.NET hoặc Hangfire → job handler nằm ở đây (khác `Workers/` vì job được scheduler kích, không tự loop).
 - `Services/`: business logic thật, worker/job gọi vào.
 - `Models/`: POCO/DTO dùng chung.
-- `Program.cs`: cấu hình Host + DI + `.UseWindowsService()` (nếu cài Windows Service) hoặc `.RunAsync()` (nếu chạy console/Docker).
+- `Program.cs`: cấu hình Host + DI + `.UseWindowsService()` (nếu cài Windows Service) hoặc `.RunAsync()` (nếu chạy console/systemd).
 - `infra/service-install/`: script PowerShell / `sc.exe create` / `nssm install` để cài service — file example, không chứa secret.
 
 ## Rule
@@ -50,3 +50,6 @@
 - `appsettings.json` chứa key runtime; secret (connection string thật, API key) nạp qua environment variable hoặc User Secrets lúc dev.
 - `build/`, `publish/`, `*.user` phải gitignore.
 - Nếu service bắt đầu có nhiều worker + nhiều domain → cân nhắc nâng lên structured.
+- Retry/backoff phải rõ cho lỗi tạm thời; không loop lỗi liên tục làm nghẽn log/CPU.
+- Nếu expose health/admin endpoint, chỉ bind nội bộ hoặc sau proxy bảo vệ.
+- Có script cài/gỡ service hoặc hướng dẫn systemd tương ứng deploy target thật.

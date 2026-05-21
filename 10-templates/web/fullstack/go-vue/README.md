@@ -68,9 +68,26 @@ Scale profile:
 
 | Profile | Khi dùng | Infra mặc định |
 |---|---|---|
-| `S1` | nhiều project nhỏ/vừa trên cùng server | shared PostgreSQL/Redis, không bind host port app |
-| `S2` | project quan trọng hoặc worker/DB vừa-nặng | cân nhắc dedicated DB/Redis trong cùng server |
-| `S3` | production lớn, SLA cao, dữ liệu cần cô lập | tách app/proxy, DB/cache, monitoring/backup sang server riêng |
+| `shared` | nhiều project nhỏ/vừa trên cùng server | shared PostgreSQL/Redis, không bind host port app |
+| `dedicated` | project quan trọng hoặc worker/DB vừa-nặng | cân nhắc dedicated DB/Redis trong cùng server |
+| `isolated` | production lớn, SLA cao, dữ liệu cần cô lập | tách app/proxy, DB/cache, monitoring/backup sang server riêng |
+
+## Runtime model cho `api` + `worker`
+
+Khi `apps/api/` có cả `cmd/api` và `cmd/worker` (1 module, 2 binary), có 3 cách chạy. Build và Docker image gần như **không nặng hơn** (cùng source, multi-target, 1 image chạy khác `CMD`); khác biệt chỉ ở **runtime RAM** và **isolation**:
+
+| Cách chạy | RAM | Isolation | Scale riêng | Hợp scale profile |
+|---|---|---|---|---|
+| 2 container (`api` + `worker` riêng) | tốn thêm ~1 process (vài chục MB) | tốt — worker crash không sập API | có | `dedicated`, `isolated` |
+| 1 container, 2 process | trung bình | khá | hạn chế | `shared` muốn tiết kiệm RAM |
+| 1 process, worker = goroutine | nhẹ nhất | kém — worker panic kéo sập API | không | MVP rất nhỏ |
+
+Khuyến nghị:
+
+- `shared` (nhiều project/server, shared DB/Redis): cân nhắc 1 container 2 process để tiết kiệm RAM; chỉ tách khi worker đủ nặng.
+- `dedicated`/`isolated` (workload nặng, cần cô lập): tách 2 container để có isolation + scale riêng.
+- Dù chạy cách nào, **business logic vẫn ở `service/`/`usecase/`** dùng chung — chọn runtime model là quyết định deploy, KHÔNG đổi cấu trúc code.
+- Ranh giới khi nào nên tách hẳn thành service riêng: xem [`STRUCTURE_STANDARD_CORE.md`](../../../../00-core/STRUCTURE_STANDARD_CORE.md) mục "Ranh giới Service ↔ Web".
 
 ## Ghi chú
 

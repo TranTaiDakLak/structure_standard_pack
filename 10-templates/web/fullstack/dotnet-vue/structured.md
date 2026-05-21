@@ -52,3 +52,7 @@
 
 - structured để dễ maintain, không phải để giả enterprise
 - nếu một phía còn nhỏ, có thể chỉ nâng phía đó trước
+- Backend và frontend giữ test/build pipeline riêng; root script chỉ orchestration.
+- API contract ổn định nên có OpenAPI hoặc tài liệu tương đương, không bắt buộc codegen.
+- Production cần healthcheck, logging, migration, secret loading và deploy target rõ.
+- Nếu shared package/contracts chưa có nhu cầu thật, không thêm layer chung.

@@ -39,3 +39,6 @@
 - `main.go` được phép ở root
 - business logic không nhét vào `main.go`
 - nếu `service/` quá to, cân nhắc nâng lên structured
+- Config mẫu không chứa secret; runtime config nạp từ env/file theo deploy target.
+- Nếu có DB, cần `migrations/` hoặc script migrate rõ.
+- API production nên có `/healthz`, `/readyz`, structured log và graceful shutdown.

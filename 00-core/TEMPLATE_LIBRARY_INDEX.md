@@ -28,6 +28,7 @@ Sau đó chọn mode:
 | web | frontend-only | nuxt | simple, structured | `10-templates/web/frontend-only/nuxt/` |
 | web | frontend-only | react-vite | simple, structured | `10-templates/web/frontend-only/react-vite/` |
 | web | fullstack | go-vue | simple, structured | `10-templates/web/fullstack/go-vue/` |
+| web | fullstack | go-vue-services | simple, structured | `10-templates/web/fullstack/go-vue-services/` |
 | web | fullstack | dotnet-vue | simple, structured | `10-templates/web/fullstack/dotnet-vue/` |
 | web | fullstack | node-react | simple, structured | `10-templates/web/fullstack/node-react/` |
 | desktop | desktop-app | wails-go-vue | simple, structured | `10-templates/desktop/wails-go-vue/` |
@@ -64,6 +65,15 @@ Sau đó chọn mode:
 - **Backup mandatory** — `scripts/{backup,restore}.sh` cho `apps/*/storage/` + DB dump.
 - **Production baseline mandatory** — health/readiness, migration script, deploy/rollback script, runbook, logging/metrics, security notes.
 
+### Ràng buộc riêng cho `web/fullstack/go-vue-services`
+
+- Kế thừa toàn bộ ràng buộc của `go-vue` ở trên.
+- **1 deployable, nhiều service module** — mỗi `services/<module>/` là 1 bounded context; KHÔNG mỗi module 1 container, KHÔNG network call nội bộ giữa module (gọi nhau in-process qua usecase port).
+- **Module sở hữu bảng/schema riêng** — cấm join chéo, cấm import repository/domain của module khác; đọc dữ liệu module khác qua usecase port của nó.
+- **`internal/app` là composition root** — thêm/bớt module chỉ sửa ở đây + folder module.
+- Khi 1 module cần deploy/scale/đội ngũ độc lập → tách repo riêng (`web/backend-only/go` hoặc `service/go-service`), không biến thành cụm microservices trong 1 repo.
+- Chọn `go-vue` khi backend là 1 khối gắn kết; chọn `go-vue-services` khi backend chia ≥ 3 bounded context khá độc lập.
+
 ---
 
 ## 4. Quy tắc dùng template
@@ -71,6 +81,19 @@ Sau đó chọn mode:
 - luôn đọc `README.md` trong từng stack folder trước
 - sau đó chọn `simple.md` hoặc `structured.md`
 - không tự bịa template ngoài pack khi chưa có lý do rõ
+- nếu template được dùng cho production, kiểm tra thêm config/secret, test, deploy, backup/log/healthcheck theo mức độ rủi ro của stack
+- nếu sửa hoặc thêm template, cập nhật đồng thời file index này và `STRUCTURE_STANDARD_CORE.md`
+
+## 5. Invariants của thư viện template
+
+Thư viện template phải giữ các invariant sau:
+
+- mỗi dòng mapping ở section 2 phải có folder thật trong `10-templates/`
+- mỗi folder stack phải có đủ `README.md`, `simple.md`, `structured.md`
+- `README.md` của stack mô tả scope và cách chọn mode, không chỉ liệt kê file
+- `simple.md` phải có đường nâng cấp sang `structured.md`
+- `structured.md` phải có rule chống over-engineering
+- stack nào có ràng buộc riêng phải được nhắc ở cả `STRUCTURE_STANDARD_CORE.md` và index này
 
 ## Metadata
 

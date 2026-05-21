@@ -39,3 +39,6 @@
 
 - giữ convention Nuxt
 - chưa cần `features/` nếu app còn nhỏ
+- Runtime config dùng Nuxt config/env, không hardcode API URL production.
+- Test tối thiểu composable/component quan trọng và e2e cho flow chính.
+- Nếu `pages/` bắt đầu chứa nhiều logic nghiệp vụ, nâng sang `structured.md`.

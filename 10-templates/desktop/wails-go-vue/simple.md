@@ -36,7 +36,8 @@
 ├── wails.json            # cấu hình Wails (tên app, build...)
 ├── go.mod                # khai báo module Go
 ├── go.sum                # checksum dependency
-└── README.md             # hướng dẫn repo
+├── README.md             # hướng dẫn repo
+└── .gitignore            # bỏ qua build/, node_modules/, dist/
 ```
 
 ## Vai trò thư mục
@@ -51,3 +52,8 @@
 - FE không gọi lung tung ngoài bridge
 - `build/` luôn gitignore
 - chưa cần internal/cmd nếu app còn nhỏ
+- Backend Go phải test được độc lập khỏi webview.
+- Frontend dùng env/config rõ cho API/binding mode, không hardcode path máy dev.
+- Build/package desktop phải ghi rõ target OS, artifact, version và installer config nếu có.
+- Secret/token runtime không nhúng vào frontend bundle; dùng config hoặc OS credential store nếu cần.
+- Nếu backend hoặc frontend bắt đầu có nhiều feature, nâng phần đó sang `structured.md`.

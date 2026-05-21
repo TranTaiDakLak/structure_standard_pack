@@ -46,3 +46,7 @@
 - module không bị rò framework khắp nơi
 - adapter không ôm logic nghiệp vụ
 - đừng biến `core/` thành thùng rác
+- Service/usecase không import trực tiếp ORM/session nếu đã có repository boundary.
+- Unit test service/usecase; integration test route/repository quan trọng.
+- API production nên có health/readiness, logging, exception handler, migration script và secret loading rõ.
+- Nếu module/layer còn giả tạo, quay lại `simple.md`.

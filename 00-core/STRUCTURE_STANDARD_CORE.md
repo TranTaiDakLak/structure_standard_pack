@@ -79,6 +79,24 @@ Nếu case nằm ngoài scope:
 - không tự bịa template "na ná" ngoài pack
 - nếu cần dùng lâu dài, tạo template mới thành file riêng và thêm vào pack
 
+### Ranh giới Service ↔ Web (app vừa chạy nền vừa có HTTP)
+
+Một app có thể vừa có worker chạy nền, vừa expose HTTP. KHÔNG chọn shape theo "có HTTP hay không", mà theo **mục đích chính + đối tượng phục vụ**.
+
+Câu hỏi quyết định: *Xóa phần HTTP (hoặc worker) đi thì app còn lý do tồn tại không?*
+
+| Trường hợp | Chủ thể chính | HTTP surface | app_shape / template |
+|---|---|---|---|
+| Web product cần chạy việc nền | **web** | API public + UI cho user | `web/fullstack/<stack>` — worker là binary phụ, share `service/` |
+| Daemon cần health/metrics/admin nhỏ | **service** | chỉ nội bộ (healthz, metrics, trigger, dashboard mini) | `service/<stack>` — thêm HTTP nhẹ, **giữ nguyên shape** |
+| Vừa web thật vừa service nặng, ít share | **cả 2** | 2 mặt riêng biệt | **2 repo riêng** theo 2 template |
+
+Rule:
+
+- "Service tiện thể có 1 trang web" KHÔNG biến nó thành `web`. "Web tiện thể có worker" KHÔNG biến nó thành `service`.
+- Chỉ tách 2 repo khi worker thật sự độc lập: khác team owner, khác nhịp release, hầu như không share `service/`/`usecase/`.
+- Khi gộp (web + worker chung repo): dùng 1 module nhiều binary (`cmd/api` + `cmd/worker`), share business logic — xem runtime model theo scale profile ở README của template tương ứng.
+
 ---
 
 ## 3. Input bắt buộc trước khi chọn template
@@ -97,7 +115,7 @@ Nếu deploy lên Linux server nhiều dự án, cần thêm nhóm input vận h
 
 - `project_name`
 - `server_root` — ví dụ `/opt/apps/<project-name>` hoặc path chuẩn nội bộ
-- `scale_profile` — `S1`, `S2`, `S3`
+- `scale_profile` — `shared`, `dedicated`, `isolated`
 - `domains`
 - `services`
 - `container_ports`
@@ -312,7 +330,19 @@ Rule:
   - FE tách admin và client thành 2 app riêng dưới `apps/` (nếu sản phẩm có cả 2 mặt)
   - Worker là optional binary trong cùng `apps/api/` Go module, không tách app riêng
   - Production baseline — health/readiness, migration script, deploy/rollback script, runbook, logging/metrics, security notes
-- Web fullstack — .NET + Vue / Node + React không bị ràng buộc Docker bắt buộc (có thể IIS/Windows hoặc Docker).
+
+### Web fullstack — Go + Vue (multi-service / modular monolith)
+- simple: `apps/api/{cmd,platform,services/<module>/{handler,service,repository,model,port},migrations}` + `apps/{admin-web,client-web}/`
+- structured: `apps/api/{cmd,internal/{app,platform,shared,services/<module>/{domain,usecase,adapter/{http,repository,external,messaging}}},migrations,tests}` + `apps/{admin-web,client-web}/`
+- Kế thừa toàn bộ ràng buộc của go-vue (Docker, apps/ layout, FE tách admin/client, backup, production baseline) cộng thêm:
+  - 1 deployable nhiều service module — KHÔNG mỗi module 1 container, KHÔNG network call nội bộ giữa module (gọi nhau in-process qua usecase port)
+  - mỗi module = 1 bounded context, sở hữu bảng/schema riêng, cấm join chéo
+  - module chỉ phụ thuộc nhau qua usecase port; cấm import repository/domain của module khác
+  - khi 1 module cần deploy/scale/đội độc lập → tách repo riêng (`web/backend-only/go` hoặc `service/go-service`), không nhồi thành microservices trong 1 repo
+
+### Web fullstack — .NET + Vue / Node + React
+- .NET + Vue: không dùng Docker — deploy qua IIS/Windows hoặc Kestrel + reverse proxy (nginx).
+- Node + React: không bị ràng buộc Docker bắt buộc (static/Node host hoặc Docker).
 
 ### Desktop — Wails + Go + Vue
 - simple: `main.go`, `app.go`, `backend/`, `frontend/`
@@ -409,18 +439,38 @@ Khi AI áp chuẩn này cho một dự án, phải output theo thứ tự:
 3. `Chosen mode`
 4. `Recommended structure`
 5. `Folder responsibilities`
-6. `Migration notes`
-7. `Assumptions`
-8. `Risks`
+6. `Operational baseline`
+7. `Migration notes`
+8. `Assumptions`
+9. `Risks`
 
 Nếu deploy lên Linux server nhiều dự án, output thêm:
 
-9. `Server registration`
-10. `Scale profile`
-11. `Port registry entries`
-12. `Domain registry entries`
-13. `Compose/network requirements`
-14. `Backup/log/healthcheck requirements`
+10. `Server registration`
+11. `Scale profile`
+12. `Port registry entries`
+13. `Domain registry entries`
+14. `Compose/network requirements`
+15. `Backup/log/healthcheck requirements`
+
+## 11. Quality gate cho template trong pack
+
+Một template chỉ được xem là đủ dùng lâu dài khi có đủ các nhóm sau:
+
+- **Scope rõ**: nói rõ khi nào dùng, khi nào không dùng, và dấu hiệu cần nâng từ `simple` lên `structured`.
+- **Entrypoint rõ**: người đọc nhìn cây thư mục là biết app/service bắt đầu ở đâu.
+- **Business boundary rõ**: business logic không nằm trong entrypoint, UI handler, worker loop, hoặc integration adapter.
+- **Config/secret rõ**: có chỗ cho config mẫu, không commit secret thật, có quy ước `.env.example` hoặc file example tương đương.
+- **Test path rõ**: có nơi đặt unit/integration/e2e test phù hợp với stack và không trộn test vào source chính khi không cần.
+- **Deploy/ops rõ**: nếu có deploy thật thì phải có vị trí `infra/`, `scripts/`, healthcheck hoặc hướng dẫn vận hành tương ứng.
+- **Upgrade path rõ**: template `simple` phải chỉ ra ngưỡng chuyển sang `structured`; template `structured` phải nhắc không chia nhỏ quá mức.
+
+Khi sửa một template:
+
+- không chỉ sửa cây thư mục, phải sửa luôn phần vai trò và rule liên quan
+- không thêm folder mới nếu chưa có trách nhiệm rõ
+- không thêm thuật ngữ enterprise nếu pack chưa cung cấp governance đi kèm
+- ưu tiên rule trung tính, không phụ thuộc hạ tầng riêng của một công ty
 
 ## Metadata
 

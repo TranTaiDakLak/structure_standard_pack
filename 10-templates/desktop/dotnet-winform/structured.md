@@ -66,3 +66,6 @@
 - `Form` KHÔNG new trực tiếp Service — inject qua Presenter/constructor.
 - Structured WinForms không có nghĩa là enterprise nặng — vẫn giữ tinh thần gọn.
 - Nếu dự án chưa đủ lớn để justify 4 project → quay lại simple.
+- Unit test Domain/Application; integration test Infrastructure quan trọng.
+- `.App` chỉ wiring UI + Presenter, không tham chiếu trực tiếp persistence/API ngoài.
+- Installer, publish output, sidecar artifact phải tách khỏi source và gitignore đúng.

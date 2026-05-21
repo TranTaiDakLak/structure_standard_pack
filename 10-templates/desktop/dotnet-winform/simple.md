@@ -56,3 +56,6 @@
 - Service KHÔNG biết gì về Form hay `System.Windows.Forms`.
 - `build/` và file installer output phải gitignore (`bin/`, `obj/`, `*.user`, `publish/`).
 - Nếu app chạy nhiều Form và bắt đầu có state dùng chung → cân nhắc nâng sang structured.
+- Presenter/Service phải có unit test cho nghiệp vụ quan trọng.
+- Installer config và sidecar nếu có phải có README/version rõ.
+- Config mẫu không chứa connection string hoặc secret thật.

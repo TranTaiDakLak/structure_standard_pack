@@ -49,3 +49,7 @@
 
 - structured chỉ có ý nghĩa nếu team thật sự bắt đầu đau vì simple
 - không thêm package/shared layer khi chưa cần
+- Backend và frontend giữ test/build pipeline riêng; root script chỉ orchestration.
+- API contract ổn định nên có OpenAPI hoặc tài liệu tương đương, không bắt buộc codegen.
+- Production cần healthcheck, logging, validation, migration, secret loading và deploy target rõ.
+- Nếu workspace/shared package chưa có nhu cầu thật, không thêm layer chung.

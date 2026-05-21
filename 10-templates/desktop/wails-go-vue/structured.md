@@ -38,10 +38,14 @@
 │   │   └── main.ts             # entrypoint
 │   ├── vite.config.ts          # cấu hình Vite
 │   └── package.json            # dependency FE
+├── tests/                      # test nằm ngoài source chính
+│   ├── go/                     # unit/integration test backend Go
+│   └── frontend/               # component/e2e test Vue
 ├── wails.json                  # cấu hình Wails
 ├── go.mod                      # khai báo module Go
 ├── go.sum                      # checksum dependency
-└── README.md                   # hướng dẫn repo
+├── README.md                   # hướng dẫn repo
+└── .gitignore                  # bỏ qua build/, node_modules/, dist/
 ```
 
 ## Vai trò thư mục
@@ -55,3 +59,7 @@
 
 - structured để tránh Go và FE dính chặt vào nhau
 - không cần kéo sang monorepo
+- `cmd/` chỉ bootstrap app; logic Go nằm trong `internal/`.
+- Frontend feature không gọi trực tiếp chi tiết integration Go nếu chưa qua boundary rõ.
+- Build/release phải ghi rõ target OS, artifact, version, và installer config.
+- Nếu cấu trúc nhiều layer nhưng app vẫn nhỏ, hạ bớt về `simple.md`.

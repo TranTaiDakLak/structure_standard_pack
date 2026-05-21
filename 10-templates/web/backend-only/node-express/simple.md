@@ -42,3 +42,6 @@
 - `server.js` chỉ boot app
 - controller không xử lý business logic dài
 - service không biết chi tiết response HTTP
+- Config mẫu dùng `.env.example`; `.env` thật phải gitignore.
+- API production nên có healthcheck, request id, error middleware, validation và graceful shutdown.
+- Nếu có DB, migration/seed script phải nằm trong `scripts/` hoặc package script rõ.

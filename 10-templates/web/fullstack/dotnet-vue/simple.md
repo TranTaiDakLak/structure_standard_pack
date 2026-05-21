@@ -11,7 +11,6 @@
 <product-name>/
 ├── docs/                                   # tài liệu chung của product
 ├── infra/                                  # deployment config chung
-│   ├── docker/                             # Dockerfile, docker-compose
 │   ├── iis/                                # cấu hình IIS (nếu host Windows)
 │   └── nginx/                              # reverse proxy cho BE + FE
 ├── scripts/                                # script dev/build/deploy chung
@@ -50,9 +49,13 @@
 
 - `backend/`: ASP.NET Core service
 - `frontend/`: Vue app
-- `infra/`: Docker, IIS, nginx
+- `infra/`: IIS, nginx
 
 ## Rule
 
 - fullstack small cho phép `backend/` + `frontend/`
 - chưa cần contracts/codegen mặc định
+- Backend có config/secret/migration/healthcheck rõ nếu chạy production.
+- Frontend dùng env cho API base URL, không hardcode endpoint production.
+- Root README phải có lệnh run/build/test cho cả backend và frontend.
+- Nếu một phía phình trước, có thể nâng riêng phía đó sang cấu trúc structured.

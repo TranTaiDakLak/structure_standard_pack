@@ -48,3 +48,6 @@
 - vẫn tôn trọng Nuxt conventions
 - không nhét toàn bộ logic vào `pages/`
 - `server/` không thành backend vô tổ chức
+- Runtime config dùng Nuxt config/env; secret server-side không rò sang client.
+- Unit test composable/feature; e2e cho flow chính.
+- Nếu server routes trở thành backend thật, tách backend riêng theo template web backend.

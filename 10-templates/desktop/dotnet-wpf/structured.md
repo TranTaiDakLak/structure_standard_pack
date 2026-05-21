@@ -34,7 +34,8 @@
 ├── <AppName>.sln                       # solution
 ├── Directory.Build.props               # thiết lập build chung
 ├── Directory.Packages.props            # quản lý version NuGet tập trung
-└── README.md                           # hướng dẫn repo
+├── README.md                           # hướng dẫn repo
+└── .gitignore                          # bỏ qua bin/, obj/, build/, *.user
 ```
 
 ## Vai trò thư mục
@@ -48,3 +49,7 @@
 
 - structured WPF không có nghĩa là enterprise nặng
 - MVVM vẫn nằm ở `.App`, domain không phụ thuộc UI
+- `Application` định nghĩa abstraction cho integration; `Infrastructure` implement, không đảo chiều phụ thuộc.
+- Test unit cho Domain/Application; integration test cho Infrastructure quan trọng.
+- Installer/publish output phải nằm ngoài source và được gitignore.
+- Nếu 4 project làm team chậm hơn mà domain còn nhỏ, quay lại `simple.md`.

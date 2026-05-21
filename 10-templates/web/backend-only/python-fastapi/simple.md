@@ -40,3 +40,6 @@
 - `main.py` chỉ boot app
 - không nhét business logic vào router
 - schema không thay cho business rule
+- Config mẫu dùng `.env.example` hoặc settings example; `.env` thật phải gitignore.
+- API production nên có healthcheck, logging chuẩn, exception handler và validation rõ.
+- Nếu có DB, Alembic/migration script phải có path rõ trong `scripts/` hoặc README.

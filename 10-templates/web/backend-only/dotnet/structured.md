@@ -11,7 +11,7 @@
 ```text
 <ServiceName>/
 ├── docs/                                  # tài liệu, flow, ghi chú kỹ thuật
-├── infra/                                 # docker, iis, deployment config
+├── infra/                                 # iis, nginx, deployment config
 ├── scripts/                               # script build/publish/migrate
 ├── config/                                # appsettings mẫu
 ├── tests/                                 # test nằm ngoài source chính
@@ -42,3 +42,7 @@
 - `.Api` không xử lý nghiệp vụ
 - `.Domain` không phụ thuộc web framework
 - chưa cần `.Contracts` nếu chưa có nhu cầu share thật
+- `.Application` định nghĩa abstraction; `.Infrastructure` implement, không đảo chiều phụ thuộc.
+- Unit test Domain/Application; integration test Infrastructure/API quan trọng.
+- API production nên có health/readiness, migration script, structured logging và secret loading rõ.
+- Nếu layer làm chậm mà domain còn nhỏ, quay lại `simple.md`.

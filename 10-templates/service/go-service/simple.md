@@ -47,3 +47,6 @@
 - Logging qua logger chuẩn (slog / zap / zerolog) — KHÔNG `fmt.Println`.
 - Config nạp từ file + env (viper hoặc tự đọc); secret KHÔNG commit.
 - Nếu service có > 3 worker / nhiều domain → cân nhắc nâng lên structured.
+- Retry/backoff phải rõ cho lỗi tạm thời; không loop lỗi liên tục làm nghẽn log/CPU.
+- Nếu expose health/metrics/admin endpoint, chỉ bind nội bộ hoặc sau proxy bảo vệ.
+- Có script build/install/run tương ứng Docker, systemd, Windows Service, cron hoặc Task Scheduler.

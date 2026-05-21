@@ -11,7 +11,7 @@
 ```text
 <ServiceName>/
 ├── docs/                               # tài liệu, flow, ghi chú kỹ thuật
-├── infra/                              # docker, iis, deployment config
+├── infra/                              # iis, nginx, deployment config
 ├── scripts/                            # script build/publish/migrate
 ├── config/                             # appsettings.example.json, không secret thật
 ├── tests/                              # test nằm ngoài source chính
@@ -44,3 +44,6 @@
 - controller không ôm logic dài
 - `src/` và `tests/` tách riêng
 - nếu flow bắt đầu rối, nâng lên structured
+- Config mẫu dùng `appsettings.example.json` hoặc env mapping; secret thật không nằm trong repo.
+- Nếu có DB, migration phải có script hoặc hướng dẫn rõ, không chạy ngầm ngoài kiểm soát.
+- API production nên có healthcheck, logging có correlation id, validation và error response thống nhất.

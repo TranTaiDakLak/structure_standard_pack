@@ -59,3 +59,6 @@
 - Logger và metrics là cross-cutting — inject qua `app/`, không mỗi worker tự khởi tạo.
 - Đừng tạo package con quá vụn. Structured là để dễ tìm code, không phải để đẹp chuẩn.
 - Nếu chưa đủ lớn để justify `cmd/` + `internal/` → quay về simple.
+- Unit test domain/usecase; integration test adapter với DB/queue/file thật khi rủi ro cao.
+- Retry/backoff, idempotency, lock/concurrency phải ghi rõ cho worker/job có tác động dữ liệu.
+- Deploy target phải có script install/run và log path rõ.

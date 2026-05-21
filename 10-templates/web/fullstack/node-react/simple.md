@@ -49,3 +49,7 @@
 
 - chưa cần workspace tool
 - vẫn giữ fullstack simple nếu code còn gọn
+- Backend có `.env.example`, healthcheck, error middleware, validation và migration script nếu có DB.
+- Frontend dùng env cho API base URL, không hardcode endpoint production.
+- Root README phải có lệnh run/build/test cho cả backend và frontend.
+- Nếu backend hoặc frontend phình trước, nâng riêng phần đó sang structured.

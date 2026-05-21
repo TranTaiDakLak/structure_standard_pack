@@ -57,7 +57,17 @@
 - [ ] 1 commit cho cleanup
 - [ ] không trộn refactor logic lớn vào cùng commit đổi cấu trúc
 
-## 7. Dấu hiệu dừng lại
+## 7. Validate sau migrate
+
+- [ ] app/service build được sau khi move folder
+- [ ] test hiện có chạy được hoặc có ghi chú rõ test nào chưa chạy
+- [ ] README đã cập nhật entrypoint, lệnh run/build/test, cấu trúc mới
+- [ ] config mẫu còn đủ nhưng không chứa secret thật
+- [ ] deploy files trong `infra/` vẫn trỏ đúng path mới
+- [ ] script trong `scripts/` không còn hardcode path cũ
+- [ ] CI/CD hoặc hướng dẫn release đã cập nhật nếu repo có pipeline
+
+## 8. Dấu hiệu dừng lại
 
 Dừng migrate nếu:
 - [ ] team không hiểu vì sao đang đổi

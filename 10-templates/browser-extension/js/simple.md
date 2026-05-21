@@ -40,3 +40,8 @@
 - không nhét toàn bộ logic vào content script
 - `build/` là output bundle, phải gitignore
 - popup logic và background logic tách rõ
+- `manifest.json` phải xin quyền tối thiểu; quyền mới phải gắn với feature thật.
+- Message contract giữa popup/content/background phải có test hoặc ghi chú rõ.
+- Config endpoint/key public đặt trong config mẫu; secret thật không nhúng vào bundle extension.
+- Script package/deploy store phải tạo artifact từ source sạch, không dùng file build thủ công.
+- Nếu bắt đầu nhiều feature, thêm `features/` và nâng sang `structured.md`.

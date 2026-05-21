@@ -43,3 +43,6 @@
 - page không nên ôm toàn bộ logic app
 - `services/` không ôm state UI
 - nếu feature tăng nhanh, nâng lên structured
+- Config dùng `.env.example` và biến `VITE_*`; không hardcode endpoint production.
+- Test tối thiểu component/logic quan trọng và e2e cho flow chính.
+- `dist/`, coverage, cache, node_modules phải gitignore.

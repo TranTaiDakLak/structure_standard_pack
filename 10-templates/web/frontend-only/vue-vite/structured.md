@@ -54,3 +54,7 @@
 - đừng để `pages/` thành nơi chứa đủ thứ
 - `components/` root không chứa component chỉ dùng cho 1 feature
 - `utils/` phải rất tiết chế
+- Feature nên chứa component/composable/api riêng nếu chỉ dùng trong feature đó.
+- Config dùng `.env.example` và biến `VITE_*`; không hardcode endpoint production.
+- Unit test feature/composable/store; e2e cho flow chính; build output luôn gitignore.
+- Nếu feature layer chỉ là folder rỗng, quay lại `simple.md`.

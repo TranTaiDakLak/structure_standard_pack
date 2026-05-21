@@ -45,3 +45,6 @@
 - page lớn mới nên chứa logic page
 - `api/` không ôm business rules
 - nếu feature nhiều lên, chuyển dần sang structured
+- Config dùng `.env.example` và biến `VITE_*`; không hardcode endpoint production.
+- Test tối thiểu component/composable/store quan trọng và e2e cho flow chính.
+- `dist/`, coverage, cache, node_modules phải gitignore.
