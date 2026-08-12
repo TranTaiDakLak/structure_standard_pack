@@ -72,12 +72,9 @@ Khối này dựng nền, chưa đổi status của endpoint nào đang chạy.
 - [ ] thêm `X-Request-Id` trên mọi response và nối vào log
 - [ ] viết `docs/api-contract.md`: contract version, bảng domain error code, danh sách endpoint ngoại lệ
 
-**Bốn món kiểm được bằng máy** — section 13 của chuẩn gọi đây là thứ duy nhất biến chuẩn từ lời khuyên thành ràng buộc kiểm được. **Phạm vi: áp cho surface đang được đưa về chuẩn.** Nhánh A là toàn bộ API. Nhánh B **chỉ `/api/v2`** — nhánh B cấm đụng `/api/v1`, nên smoke test duyệt route sẽ đỏ trên v1 theo đúng thiết kế; giới hạn test theo prefix, không nới luật. Dựng ngay ở khối chung, nhưng chỉ xanh hết khi surface trong scope đã đổi xong.
+- [ ] khai `code` thành một kiểu riêng và ép writer chỉ nhận kiểu đó (`type Code string` ở Go, `StrEnum` ở Python, union `as const` ở TS, `const string` trong static class ở C#) — compiler chặn code lạ ngay lúc build, rẻ hơn mọi cơ chế khác
 
-- [ ] **ràng buộc compile-time cho `code`**: khai kiểu riêng (`type Code string` ở Go, `StrEnum` ở Python, union `as const` ở TS, `const string` trong static class ở C#) và ép writer chỉ nhận kiểu đó; repo JS thuần thay bằng một test grep
-- [ ] **Test 1** — table-driven test cho bảng mã, phủ đủ 17 mã reserved **và mọi domain code**; bảng tách 2 nửa theo section 6.1 thì test cả `retryable` ở tầng domain lẫn `status` ở package writer
-- [ ] **Test 2** — smoke test duyệt mọi route đã mount trong scope: một request lỗi cố ý assert body có `error.code` + `error.trace_id`; một request list assert body có đúng 2 khóa `items` + `page`
-- [ ] **Test 3** — test e2e cố ý gây panic rồi assert body không chứa chuỗi nào của stack trace
+Nếu dự án muốn tự kiểm chặt hơn, section 13 của chuẩn gợi ý 3 test và nói rõ khi nào đáng làm. **Phạm vi nếu dùng:** nhánh A là toàn bộ API; nhánh B **chỉ `/api/v2`** — nhánh B cấm đụng `/api/v1` nên smoke test duyệt route sẽ đỏ trên v1 theo đúng thiết kế, giới hạn test theo prefix chứ không nới luật.
 
 ### Nhánh A — mọi client nằm trong repo
 

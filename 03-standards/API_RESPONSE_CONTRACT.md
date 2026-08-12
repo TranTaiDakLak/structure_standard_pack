@@ -488,9 +488,9 @@ Deprecate endpoint: header `Deprecation: true` + `Sunset: <http-date>` (Tier 2),
 
 ---
 
-## 13. Definition of done
+## 13. Tự kiểm khi áp chuẩn
 
-Repo mới coi là đã áp xong chuẩn khi tick đủ danh sách này. Repo cũ đang migrate dùng mục 5b của [`02-checklists/MIGRATION_CHECKLIST.md`](../02-checklists/MIGRATION_CHECKLIST.md).
+Danh sách để tự soát khi vừa áp chuẩn vào một repo. Repo cũ đang migrate dùng mục 5b của [`02-checklists/MIGRATION_CHECKLIST.md`](../02-checklists/MIGRATION_CHECKLIST.md).
 
 - [ ] Helper response + writer nằm đúng folder mà template của stack chỉ định; không handler nào tự serialize
 - [ ] Đúng 1 file khai báo error code; không có chuỗi code literal rải trong handler
@@ -498,15 +498,25 @@ Repo mới coi là đã áp xong chuẩn khi tick đủ danh sách này. Repo c�
 - [ ] Middleware recover/exception toàn cục đã đăng ký; 404 và 405 của framework đã bị override thành JSON
 - [ ] `X-Request-Id` có trên mọi response và bằng đúng request id trong log
 - [ ] Bẫy framework của stack đã xử lý (section 4 của appendix)
-- [ ] **Đã gọi thử một endpoint success và mắt thấy `created_at` / `customer_id` là snake_case.** 3 test dưới đây chỉ chạm nhánh error — nhánh success sai casing sẽ lọt qua tất cả
+- [ ] **Đã gọi thử một endpoint success và mắt thấy `created_at` / `customer_id` là snake_case.** Sai casing ở nhánh success là lỗi im lặng hay lọt nhất
 - [ ] Reverse proxy (nginx/IIS/Caddy) đã override 413, 502, 504 thành JSON envelope và tự sinh `X-Request-Id` khi request chưa có
 - [ ] `docs/api-contract.md` đã có: contract version, bảng domain error code, danh sách endpoint ngoại lệ
-- [ ] **Ràng buộc compile-time cho `code`** — khai kiểu riêng (`type Code string` ở Go, `StrEnum` ở Python, union `as const` ở TS, `const string` trong static class ở C#) và ép writer **chỉ nhận kiểu đó**. Compiler chặn code lạ, rẻ hơn và chắc hơn mọi test. Chỉ repo JS thuần mới cần thay bằng một test grep
-- [ ] **Test 1** — table-driven test cho pure function `code -> (status, retryable)`, phủ đủ 17 mã reserved **và mọi domain code**; bảng tách 2 nửa thì test cả nửa `retryable` ở domain lẫn nửa `status` ở package writer, và assert 2 nửa không lệch key
-- [ ] **Test 2** — smoke test duyệt mọi route đã mount: một request lỗi cố ý assert body có `error.code` + `error.trace_id`; một request list assert body có đúng 2 khóa `items` + `page`. Đây là test **duy nhất** chạm nhánh success — không có nó thì drift hình dạng success không ai bắt được
-- [ ] **Test 3** — test e2e cố ý gây panic rồi assert body không chứa chuỗi nào của stack trace
 
-Bốn ô này là thứ duy nhất biến chuẩn từ lời khuyên thành ràng buộc kiểm được bằng máy. Bỏ chúng thì mọi luật ở trên chỉ còn sống nhờ code review.
+### Khai `code` thành một kiểu riêng
+
+Rẻ nhất và chắc nhất: khai kiểu riêng cho `code` (`type Code string` ở Go, `StrEnum` ở Python, union `as const` ở TS, `const string` trong static class ở C#) và ép writer **chỉ nhận kiểu đó**. Compiler chặn code lạ ngay lúc build, không cần cơ chế nào khác. Repo JS thuần không có kiểu thì đây là chỗ duy nhất cần một test grep thay thế.
+
+### Test — khuyến nghị, không bắt buộc
+
+Chuẩn này không ép dự án nào phải viết test. Nhưng ba test dưới đây rẻ, và là thứ duy nhất bắt được drift mà code review hay bỏ sót — cân nhắc theo quy mô và tuổi thọ dự án:
+
+| Test | Bắt gì | Đáng làm khi |
+|---|---|---|
+| Table-driven cho bảng mã | Code thiếu entry, hai nửa bảng lệch key sau khi tách | Có domain code, hoặc bảng bắt đầu dài |
+| Smoke duyệt mọi route đã mount | Drift hình dạng — cả `error.code`/`error.trace_id` lẫn `items`/`page`. Đây là chỗ duy nhất chạm nhánh success | Nhiều người cùng thêm endpoint, hoặc nhiều module trong một binary |
+| E2e cố ý gây panic | 500 rò stack trace ra ngoài | API có consumer ngoài repo, hoặc dữ liệu nhạy cảm |
+
+Không viết test thì các luật ở trên sống nhờ code review — chấp nhận được với repo nhỏ, rủi ro tăng dần theo số người cùng chạm.
 
 ---
 

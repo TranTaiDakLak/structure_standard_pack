@@ -70,14 +70,14 @@ var retryableTable = map[Code]bool{
 	// Code("wallet.insufficient_funds"): false,
 }
 
-// Retryable là nửa domain của pure function ở Definition of done — test 1 là
+// Retryable là nửa domain của bảng mã (chuẩn section 6.1). Nếu viết test thì
 // table-driven, phủ đủ 17 mã reserved VÀ mọi domain code đã thêm bên trên.
 // Code lạ rơi về false; kiểu `Code` ở trên là thứ chặn code lạ ngay lúc compile.
 func Retryable(c Code) bool { return retryableTable[c] }
 
-// Codes trả mọi code có trong bảng. Cần cho test 1 (section 8): sau khi tách package,
-// retryableTable nằm ở đây còn statusTable nằm ở writer, cả hai đều unexported — không
-// có accessor này thì assert "hai nửa cùng tập key" không viết được từ package nào cả.
+// Codes trả mọi code có trong bảng. Cần nếu muốn assert hai nửa bảng không lệch key
+// (section 8): sau khi tách package, retryableTable nằm ở đây còn statusTable nằm ở
+// writer, cả hai đều unexported nên không có accessor này thì không viết được.
 func Codes() []Code {
 	out := make([]Code, 0, len(retryableTable))
 	for c := range retryableTable {
@@ -479,22 +479,20 @@ Rule:
 
 ## 8. Còn thiếu gì
 
-Copy hết 7 khối trên vẫn chưa đủ Definition of done (section 13). Còn lại đúng 3 test bắt buộc của DoD, không đổi tên không đổi số:
+Copy hết 7 khối trên là xong phần code. Còn lại: `docs/api-contract.md` của repo, và override 413/502/504 ở reverse proxy (appendix section 4) — hai thứ nằm ngoài code Go.
 
-- **Test 1** — table-driven cho `Retryable()` và `statusOf()`, phủ 17 mã reserved **và mọi domain code**. Thêm một assert rằng hai nửa bảng cùng một tập key — lệch nhau là cách bảng này hỏng. Test này đặt **trong package writer** (nó cần `statusTable` vốn unexported) và duyệt tập key qua `model.Codes()`:
+`type Code string` ở section 1 đã chặn code lạ ngay lúc compile, nên không cần test grep chuỗi code.
 
-  ```go
-  for _, c := range model.Codes() {
-  	if _, ok := statusTable[c]; !ok {
-  		t.Errorf("code %q có trong retryableTable nhưng thiếu ở statusTable", c)
-  	}
-  }
-  // và chiều ngược lại: mọi key của statusTable phải có trong model.Codes()
-  ```
-- **Test 2** — smoke test duyệt **mọi route đã mount**: một request lỗi cố ý assert body có `error.code` + `error.trace_id`; một request list assert body đúng 2 khóa `items` + `page`. Đây là test **duy nhất** chạm nhánh success — bỏ nó thì DTO sai casing hoặc thiếu `.UTC()` (section 5) không có gì bắt được. Đừng thay bằng test grep: grep chỉ soi chuỗi code, `type Code string` ở trên đã chặn code lạ từ lúc compile rồi.
-- **Test 3** — e2e cố ý panic, assert body không chứa chuỗi nào của stack trace.
+Nếu muốn tự kiểm chặt hơn — không bắt buộc, xem section 13 của chuẩn để biết khi nào đáng làm — thì test rẻ nhất và đáng làm sớm nhất là assert hai nửa bảng không lệch key. Đặt **trong package writer** vì nó cần `statusTable` vốn unexported, duyệt tập key qua `model.Codes()`:
 
-Cộng `docs/api-contract.md` và override 413/502/504 ở reverse proxy.
+```go
+for _, c := range model.Codes() {
+	if _, ok := statusTable[c]; !ok {
+		t.Errorf("code %q có trong retryableTable nhưng thiếu ở statusTable", c)
+	}
+}
+// và chiều ngược lại: mọi key của statusTable phải có trong model.Codes()
+```
 
 ## Metadata
 

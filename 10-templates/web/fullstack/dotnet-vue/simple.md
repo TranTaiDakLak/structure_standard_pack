@@ -67,7 +67,7 @@ Theo [`03-standards/API_RESPONSE_CONTRACT.md`](../../../../03-standards/API_RESP
 - Response helper + writer: `backend/src/<ServiceName>/Dtos/` — `ApiError`, `ErrorDetail`, `PagedResult<T>` đặt chung trong folder DTO sẵn có; mọi controller đi qua đây, không tự dựng shape riêng
 - File khai báo error code, đúng 1 file cho cả repo: `backend/src/<ServiceName>/Dtos/ErrorCodes.cs` — static class, `const string`
 - Exception/recover middleware toàn cục: đăng ký `UseExceptionHandler` trong `backend/src/<ServiceName>/Program.cs`, log full stack + request id, response 500 có `message` cố định
-- `[ApiController]` tự sinh RFC 7807 cho lỗi model-binding và `System.Text.Json` mặc định camelCase. `Program.cs` bắt buộc 3 khối sau (cần .NET 8+ cho `SnakeCaseLower`; .NET 6/7 phải tự viết `JsonNamingPolicy`). Thiếu khối 1 thì success trả camelCase, còn error chỉ đúng snake_case khi ghi từ middleware — lỗi trả bằng `ObjectResult` của controller (422 từ ValidationFilter) cũng camelCase. Sai im lặng, và test DoD vẫn xanh nếu request lỗi cố ý đi qua middleware:
+- `[ApiController]` tự sinh RFC 7807 cho lỗi model-binding và `System.Text.Json` mặc định camelCase. `Program.cs` bắt buộc 3 khối sau (cần .NET 8+ cho `SnakeCaseLower`; .NET 6/7 phải tự viết `JsonNamingPolicy`). Thiếu khối 1 thì success trả camelCase, còn error chỉ đúng snake_case khi ghi từ middleware — lỗi trả bằng `ObjectResult` của controller (422 từ ValidationFilter) cũng camelCase. Sai im lặng: soát bằng một request lỗi đi qua middleware sẽ thấy đúng, phải gọi thử endpoint success mới lộ.
 
   ```csharp
   // 1. Controller MVC — BẮT BUỘC. Thiếu dòng này thì mọi response success trả camelCase.

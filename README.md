@@ -5,7 +5,7 @@ Bộ chuẩn cho dự án nội bộ, hai trục:
 - **Cấu trúc** — code đặt ở folder nào. Chuẩn hóa theo 3 tầng `delivery_type → app_shape → stack`, có đường nâng cấp từ `simple` lên `structured`.
 - **Hành vi** — code phải hành xử thế nào. Hiện có [API Response Contract](03-standards/API_RESPONSE_CONTRACT.md) (`api-1`): mọi dự án trả response cùng một hình dạng.
 
-Pack tách theo **core / prompts / checklists / standards / templates**. Đổi gì qua từng version, và dự án đang chạy cần làm gì: [`CHANGELOG.md`](CHANGELOG.md).
+Pack tách theo **core / prompts / checklists / standards / templates**.
 
 ## Cấu trúc pack
 
@@ -16,7 +16,6 @@ structure_standard_pack/
 ├── 02-checklists/    # checklist migrate repo cũ sang chuẩn mới
 ├── 03-standards/     # chuẩn cross-cutting: code phải hành xử thế nào (API response contract...)
 ├── 10-templates/     # thư viện template thật, phân theo delivery/shape/stack
-├── CHANGELOG.md      # pack đổi gì qua từng version, và dự án đang chạy cần làm gì
 └── README.md         # file này — tổng quan pack
 ```
 
@@ -102,7 +101,7 @@ Tài liệu hạ tầng riêng, script deploy riêng, hoặc chuẩn server có 
 
 ## Quality gate khi sửa pack
 
-Mỗi thay đổi nên giữ 7 điều kiện sau:
+Mỗi thay đổi nên giữ 6 điều kiện sau:
 
 - `README.md`, `STRUCTURE_STANDARD_CORE.md`, `TEMPLATE_LIBRARY_INDEX.md` cùng version và cùng scope support.
 - Mỗi stack trong `10-templates/` có đủ `README.md`, `simple.md`, `structured.md`.
@@ -110,7 +109,6 @@ Mỗi thay đổi nên giữ 7 điều kiện sau:
 - Link Markdown nội bộ phải trỏ tới file có thật; không để hướng dẫn trỏ sang tài liệu nội bộ không nằm trong pack.
 - Nếu thêm stack mới, phải cập nhật đồng thời core, index, README root, và template folder tương ứng.
 - Nếu thêm hoặc sửa chuẩn trong `03-standards/`, phải cập nhật đồng thời `03-standards/README.md`, core, index, README root, và các template bị ràng buộc. Template chỉ **trỏ** về chuẩn, không nhân bản nội dung chuẩn.
-- Mỗi lần bump version phải có entry trong `CHANGELOG.md`, kèm mục "dự án đang chạy cần làm gì" — pack được tiêu thụ qua raw URL nên người dùng không thấy diff.
 
 ## Metadata
 
