@@ -43,7 +43,8 @@ Kế thừa toàn bộ quy ước của `go-vue` (Docker bắt buộc, layout `a
 4. **Cross-cutting ở `platform/`, wiring ở `app/`** — logger, metrics, db pool, http server, config dùng chung; composition root `internal/app` quyết định module nào được mount.
 5. **Worker là optional binary** — khi cần background cho 1 hoặc nhiều module, thêm `cmd/worker/main.go`, share `usecase` của module, KHÔNG copy logic. 1 module, 2 binary.
 6. **Mỗi module tự khai báo điểm gắn vào hệ thống** — routes/worker/job của module gom trong `module.go` (structured) để `app/` mount gọn, tránh `main.go` phình.
-7. **DB dùng chung, schema tách theo module** — 1 database, mỗi module sở hữu bảng/schema riêng; KHÔNG join chéo bảng của module khác, đọc dữ liệu module khác qua usecase của nó.
+7. **DB dùng chung, schema tách theo module** — 1 database, mỗi module sở hữu bảng/schema riêng; KHÔNG join chéo bảng của module khác, đọc dữ liệu module khác qua usecase của nó. Cần list/báo cáo ghép dữ liệu nhiều module thì dùng **read model read-only** có chủ sở hữu khai trong `docs/architecture.md`, cập nhật qua event — thứ bị cấm là **ghi** chéo và **join trực tiếp bảng nghiệp vụ**, không phải cấm đọc.
+8. **API response contract dùng chung, KHÔNG per-module** — mọi module áp [`03-standards/API_RESPONSE_CONTRACT.md`](../../../../03-standards/API_RESPONSE_CONTRACT.md) contract `api-1` và ghi response qua đúng 1 writer ở `platform/`. Bảng mã lỗi tách 2 nửa theo chuẩn section 6.1: nửa `retryable` ở tầng dùng chung không chạm HTTP (`apps/api/shared/` ở simple, `internal/shared/` ở structured) để `service`/`usecase` rẽ nhánh được mà không import `net/http`; nửa `status` ở cùng package với writer. Domain error code đặt `<module>.<reason>` khớp tên folder trong `services/`, và phải có entry ở **cả hai** nửa — không module nào tự chọn status. Đây là stack dễ drift hình dạng response nhất mỗi lần thêm module mới.
 
 ## Khi nào tách 1 module ra repo riêng
 

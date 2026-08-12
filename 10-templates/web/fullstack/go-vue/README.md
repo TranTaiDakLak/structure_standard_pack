@@ -29,6 +29,7 @@ Nếu muốn tối ưu trải nghiệm chọn template, có thể coi `structure
 5. **Backup mandatory** — `scripts/backup.sh` + `restore.sh` cho `apps/*/storage/` + DB dump.
 6. **Compose rõ nguồn sự thật** — `infra/compose/dev.yml` cho dev all-in-one; `infra/compose/prod.yml` là source of truth cho production khi product có nhiều app; `apps/<name>/docker-compose.yml` chỉ dùng cho app standalone/smoke/deploy tách rời.
 7. **Production baseline bắt buộc** — health/readiness, migrations script, backup restore drill, logging/metrics, runbook vận hành.
+8. **API response contract bắt buộc** — `apps/api/` sinh HTTP API nên áp [`03-standards/API_RESPONSE_CONTRACT.md`](../../../../03-standards/API_RESPONSE_CONTRACT.md) contract `api-1` ở mức đầy đủ; `admin-web`/`client-web` áp ở vai consumer (api client + mirror `ErrorCode` bằng union type). Bảng mã lỗi tách 2 nửa theo chuẩn section 6.1: nửa `retryable` ở tầng nghiệp vụ (`apps/api/model/errors.go` ở simple, `apps/api/internal/domain/errors.go` ở structured) để `service`/`usecase`/`worker` rẽ nhánh mà không import HTTP adapter; nửa `status` ở cùng package với writer (`handler/response/` ở simple, `internal/platform/httpx/` ở structured), và mỗi domain code phải có entry ở cả hai nửa; `infra/nginx/` phải override 413/502/504 thành JSON envelope theo [appendix](../../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md) section 4.
 
 ## Production baseline cho server công ty
 

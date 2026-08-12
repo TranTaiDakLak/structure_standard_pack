@@ -26,7 +26,7 @@
 │   ├── app/                        # bootstrap (DI, config, logger)
 │   ├── worker/                     # long-running loop — orchestrate usecase
 │   ├── job/                        # scheduled job (robfig/cron)
-│   ├── domain/                     # entity + rule cốt lõi, không biết HTTP/DB
+│   ├── domain/                     # entity + rule cốt lõi + errors.go (bảng error code) — không biết HTTP/DB
 │   ├── usecase/                    # application flow — orchestrate domain + adapter
 │   ├── adapter/                    # cổng ra ngoài (hexagonal)
 │   │   ├── repository/             # SQL/NoSQL implement port
@@ -62,3 +62,22 @@
 - Unit test domain/usecase; integration test adapter với DB/queue/file thật khi rủi ro cao.
 - Retry/backoff, idempotency, lock/concurrency phải ghi rõ cho worker/job có tác động dữ liệu.
 - Deploy target phải có script install/run và log path rõ.
+
+## API response contract
+
+Theo [`03-standards/API_RESPONSE_CONTRACT.md`](../../../03-standards/API_RESPONSE_CONTRACT.md), contract `api-1`. Service không phải web API, nhưng dính chuẩn ở 2 chỗ:
+
+**1. Hợp đồng với hệ thống chạy service — health surface và exit code.**
+- `/healthz` (liveness, KHÔNG gọi DB) + `/readyz` (readiness, có gọi dependency) bắt buộc khi service có HTTP surface. Hình dạng body và luật **miễn trừ error envelope** lấy nguyên ở [appendix](../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md) section 1.6 — không tự chế body khác. Daemon chạy dài bắt buộc có cả 2 — probe của Docker/systemd vốn đã cần.
+- Job chạy một lần rồi thoát (cron) thì **không** dựng HTTP server chỉ để có health endpoint. Ở đó **exit code LÀ contract, thay vai trò status code**: `0` = mọi bước BẮT BUỘC hoàn tất, `!= 0` = cần người can thiệp và alert bám vào đây. Phải liệt kê trong `docs/` bước/nguồn nào bắt buộc, nguồn nào best-effort (fail vẫn `0` nhưng log mức warn). Bản ghi hỏng giữa chừng đẩy vào bảng/thư mục lỗi kèm `trace_id` của lần chạy, KHÔNG đổ cả job. Luật đầy đủ: [appendix](../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md) section 2.3.
+- `trace_id` của job one-shot là `run_id` sinh lúc bắt đầu lần chạy, persist cùng bản ghi (appendix section 2.0).
+
+**2. Consumer của API khác — nguồn sự thật để retry khác nhau theo loại upstream.**
+- **Upstream tự khai `contract: api-1`:** đọc `error.code` + `error.retryable` trong body, KHÔNG suy từ status code trần, KHÔNG parse `message` để đoán loại lỗi.
+- **Upstream bên thứ 3** (partner API, cổng thanh toán, hệ thống nội bộ cũ) — ca phổ biến nhất của service: **HTTP status code + header `Retry-After` CHÍNH LÀ nguồn sự thật**, vì đó là hợp đồng duy nhất họ thật sự tuân. Mỗi upstream một adapter riêng trong `internal/adapter/external/`, map về taxonomy của mình rồi mới ra ngoài; cấm duck-type `body.error`. Luật đầy đủ: [appendix](../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md) section 2.5.
+- Sau khi đã map: `retryable: false` thì **dừng và đẩy sang dead-letter / bảng lỗi**, không backoff vô hạn; `retryable: true` mới backoff. Rule "retry/backoff, idempotency, lock/concurrency phải ghi rõ" ở trên lấy đây làm căn cứ máy đọc được.
+- Adapter boundary — `internal/adapter/external/` và `internal/adapter/messaging/` — là nơi DUY NHẤT biết hình dạng lỗi của upstream; đừng để mã lỗi của bên thứ 3 rò vào `internal/usecase/` hay `internal/worker/`.
+- `internal/domain/errors.go`: nơi đặt type + bảng code, đúng 1 file cho cả repo. Đặt ở `domain` chứ **không** ở `adapter` để `usecase` và `worker` rẽ nhánh theo `code` mà không phải import ngược vào adapter — giữ đúng chiều DI đảo ngược của template này. Adapter chỉ map lỗi bên ngoài **vào** tập code này.
+- Code Go tham chiếu: [`03-standards/snippets/go-api-contract.md`](../../../03-standards/snippets/go-api-contract.md) — section 1 (`Code` + `AppError` + `Retryable()`, KHÔNG import `net/http`) copy vào `internal/domain/errors.go`; section 2–4 (writer + middleware) chỉ copy khi service có HTTP surface, đặt trong package writer dưới `internal/adapter/`, không import chung.
+
+Nếu service có thêm HTTP endpoint nội bộ (admin, trigger, dashboard mini) thì các endpoint đó áp TOÀN BỘ contract như một API thật.

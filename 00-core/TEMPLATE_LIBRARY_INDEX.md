@@ -80,6 +80,7 @@ Sau đó chọn mode:
 
 - luôn đọc `README.md` trong từng stack folder trước
 - sau đó chọn `simple.md` hoặc `structured.md`
+- template quyết định **cây thư mục**; chuẩn trong [`03-standards/`](../03-standards/README.md) quyết định **hành vi của code** — phải đọc cả hai, xem section 6
 - không tự bịa template ngoài pack khi chưa có lý do rõ
 - nếu template được dùng cho production, kiểm tra thêm config/secret, test, deploy, backup/log/healthcheck theo mức độ rủi ro của stack
 - nếu sửa hoặc thêm template, cập nhật đồng thời file index này và `STRUCTURE_STANDARD_CORE.md`
@@ -94,8 +95,28 @@ Thư viện template phải giữ các invariant sau:
 - `simple.md` phải có đường nâng cấp sang `structured.md`
 - `structured.md` phải có rule chống over-engineering
 - stack nào có ràng buộc riêng phải được nhắc ở cả `STRUCTURE_STANDARD_CORE.md` và index này
+- stack nào bị ràng buộc bởi chuẩn cross-cutting phải có mục trỏ về `03-standards/` trong cả `simple.md` lẫn `structured.md`, và **chỉ trỏ**, không nhân bản nội dung chuẩn
+
+---
+
+## 6. Chuẩn cross-cutting áp kèm template
+
+Chọn template xong chưa đủ. Dự án còn phải theo các chuẩn trong [`03-standards/`](../03-standards/README.md) — luật về hành vi của code, không phụ thuộc cây thư mục.
+
+| delivery_type / app_shape | stack | API Response Contract |
+|---|---|---|
+| web / backend-only | go, dotnet, node-express, python-fastapi | Toàn bộ |
+| web / fullstack | go-vue, go-vue-services, dotnet-vue, node-react | Toàn bộ |
+| web / frontend-only | vue-vite, nuxt, react-vite | Vai consumer — api client + type mirror. Nuxt: nghĩa vụ producer chỉ áp cho `server/api/**` (machine-facing), trang SSR cho browser thì không |
+| service / service | go-service, dotnet-worker-service | `/healthz` + `/readyz` bắt buộc khi service có HTTP surface; `error.code` + `retryable` làm căn cứ retry/backoff ở mọi trường hợp |
+| desktop / desktop-app | wails-go-vue | Phần error qua Wails bridge |
+| desktop / desktop-app | dotnet-wpf, dotnet-winform | Vai consumer |
+| browser-extension / extension | js | Vai consumer + messaging error |
+
+Chi tiết nơi đặt code cho từng stack: [`03-standards/API_RESPONSE_CONTRACT_APPENDIX.md`](../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md) section 3.
 
 ## Metadata
 
-- Version: `3.0-refactored`
+- Version: `3.1`
 - Owner: `https://github.com/TranTaiDakLak/`
+- Maintainer: `Engineering / Architecture`

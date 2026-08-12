@@ -17,6 +17,7 @@
 7. Không mặc định contracts-first, codegen, packages/libs, ADR, CODEOWNERS.
 8. Không ép tạo hàng loạt folder rỗng chỉ để “đẹp chuẩn”.
 9. Chỉ support những gì pack hiện tại đã có template thật.
+10. Cấu trúc thư mục là một trục; **hành vi của code là trục còn lại**. Thứ áp cho mọi stack bất kể cây thư mục nằm ở `03-standards/` — xem section 12.
 
 ---
 
@@ -48,6 +49,12 @@
 - `vue-vite`
 - `nuxt`
 - `react-vite`
+
+#### Web fullstack
+- `go-vue`
+- `go-vue-services`
+- `dotnet-vue`
+- `node-react`
 
 #### Desktop
 - `wails-go-vue`
@@ -206,7 +213,7 @@ Các vùng ý nghĩa sau phải rõ trong repo, bất kể stack nào.
 
 | Vùng | Ý nghĩa |
 |---|---|
-| `docs/` | tài liệu markdown, flow, ghi chú kỹ thuật |
+| `docs/` | tài liệu markdown, flow, ghi chú kỹ thuật. Dự án có API bắt buộc có `docs/api-contract.md` — xem section 12 |
 | `infra/` | docker, iis, nginx, systemd, deployment config, installer (chọn sub-folder theo deploy_target) |
 | `scripts/` | script hỗ trợ run/dev/build/migrate |
 | `config/` | file mẫu cấu hình, không chứa secret thật |
@@ -444,6 +451,8 @@ Khi AI áp chuẩn này cho một dự án, phải output theo thứ tự:
 8. `Assumptions`
 9. `Risks`
 
+Nếu dự án có HTTP API, output thêm mục `API response contract`, đặt **trước** `Assumptions`: xác nhận project theo `03-standards/API_RESPONSE_CONTRACT.md` version nào, đặt helper response ở folder nào của cây vừa chọn, và liệt kê ngoại lệ nếu có (endpoint dùng cursor, batch non-atomic, bounded collection không phân trang, webhook receiver).
+
 Nếu deploy lên Linux server nhiều dự án, output thêm:
 
 10. `Server registration`
@@ -472,8 +481,36 @@ Khi sửa một template:
 - không thêm thuật ngữ enterprise nếu pack chưa cung cấp governance đi kèm
 - ưu tiên rule trung tính, không phụ thuộc hạ tầng riêng của một công ty
 
+## 12. Chuẩn cross-cutting
+
+Section 1–11 nói **code đặt ở đâu**. Thư mục [`03-standards/`](../03-standards/README.md) nói **code phải hành xử thế nào** — luật áp cho mọi `delivery_type` / `app_shape` / `stack`, không phụ thuộc cây thư mục.
+
+Tra danh mục đầy đủ và bảng "chuẩn nào áp cho stack nào" tại [`03-standards/README.md`](../03-standards/README.md).
+
+### API Response Contract
+
+Mọi dự án có HTTP surface phải trả response theo cùng một hình dạng: [`03-standards/API_RESPONSE_CONTRACT.md`](../03-standards/API_RESPONSE_CONTRACT.md), contract version `api-1`.
+
+Tóm tắt 8 luật Tier 0 — bắt buộc kể cả MVP một người:
+
+1. Status code nói đúng sự thật; không bao giờ `200` cho request thất bại.
+2. Mọi status ≥ 400 là `{"error": {...}}` JSON, kể cả 404 route lạ và 500 do panic.
+3. Bắt buộc 4 field: `code`, `message`, `trace_id`, `retryable`.
+4. `trace_id` bằng request id trong log, mirror ra header `X-Request-Id` trên mọi response.
+5. List luôn là `{"items": [...], "page": {...}}` — không bare array.
+6. JSON key `snake_case`, timestamp RFC3339 UTC kết thúc `Z`, mọi `id` là string.
+7. 500 không lộ stack trace, SQL, path nội bộ, connection string.
+8. Endpoint FE/public nằm dưới `/api/v1`; mọi thứ miễn trừ nằm ngoài prefix.
+
+Rule khi áp vào cấu trúc:
+
+- Không đẻ layer mới cho contract. Dùng đúng folder template đã có — bảng "nơi đặt code theo từng stack" ở [appendix](../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md) section 3.
+- Domain và usecase **không** biết HTTP status, không sinh câu tiếng Việt. Domain trả typed error, adapter HTTP mới map sang status + code + message. Đây là hệ quả trực tiếp của boundary rule ở section 5, không phải luật mới.
+- Mỗi repo có **đúng một file** khai báo error code; cấm rải chuỗi literal trong handler.
+- Dự án có API bắt buộc có `docs/api-contract.md`: contract version, bảng domain error code, và danh sách endpoint có ngoại lệ.
+
 ## Metadata
 
-- Version: `3.0-refactored`
+- Version: `3.1`
 - Owner: `https://github.com/TranTaiDakLak/`
 - Maintainer: `Engineering / Architecture`

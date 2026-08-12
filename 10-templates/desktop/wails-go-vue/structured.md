@@ -24,7 +24,7 @@
 │       └── main.go             # wails.Run + bind bridge
 ├── internal/                   # code private Go
 │   ├── app/                    # bootstrap, DI, bridge expose ra FE
-│   ├── domain/                 # entity + rule cốt lõi
+│   ├── domain/                 # entity + rule cốt lõi + errors.go (bảng error code)
 │   ├── usecase/                # application flow
 │   └── adapter/                # cổng ra ngoài
 │       ├── repository/         # persistence (file/DB local)
@@ -63,3 +63,19 @@
 - Frontend feature không gọi trực tiếp chi tiết integration Go nếu chưa qua boundary rõ.
 - Build/release phải ghi rõ target OS, artifact, version, và installer config.
 - Nếu cấu trúc nhiều layer nhưng app vẫn nhỏ, hạ bớt về `simple.md`.
+
+## API response contract
+
+Theo [`03-standards/API_RESPONSE_CONTRACT.md`](../../../03-standards/API_RESPONSE_CONTRACT.md), contract `api-1`. Bridge Wails không phải HTTP nên áp **phần error, không áp phần success**:
+
+- Success: bound method trả giá trị trần theo idiom Go, không bọc envelope.
+- Error: Wails ép Go `error` thành Promise reject với một **chuỗi trần**, mất sạch `code`, `retryable`, `user_message`. Vì thế bound method trả `(T, *AppError)` và bridge wrapper serialize error thành đúng object `{code, message, trace_id, retryable, user_message?}` như HTTP.
+- Nơi đặt bridge wrapper: `internal/app/`
+- `internal/domain/errors.go`: nơi khai `Code` + `AppError` + `Retryable()`, đúng 1 file cho cả repo (chuẩn section 6.4). Đặt ở `domain` để `internal/usecase/` và `internal/adapter/` rẽ nhánh theo `code` mà không phải import ngược vào `internal/app/`.
+- Code Go tham chiếu: [`03-standards/snippets/go-api-contract.md`](../../../03-standards/snippets/go-api-contract.md) — Wails **chỉ cần section 1** (bảng 17 mã + `AppError` + `Retryable()`) copy vào `internal/domain/errors.go`; bridge không phải HTTP nên bỏ writer/middleware ở section 2–4.
+- `recover()` trong wrapper map sang `internal` + `trace_id`, ghi `trace_id` vào log file local — để support desktop có cùng khoá join với log server.
+- FE trong `frontend/src/services/` bắt `ApiError` cùng một union `ErrorCode` với API server nếu app có gọi API ngoài.
+- Sidecar trong `sidecar/` là một **upstream không tuân `api-1`**: mỗi sidecar một adapter riêng trong `internal/adapter/external/` theo [appendix section 2.5](../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md). Nó có thêm một trạng thái mà API mạng không có — **chưa chạy** — map thành `dependency_failed` + `message` nói rõ sidecar nào; cấm để `ECONNREFUSED` rò lên UI.
+- Lỗi chỉ tồn tại ở máy người dùng (mất mạng, user huỷ, ghi SQLite local hỏng) dùng nhóm `client.*` ở [appendix section 2.0b](../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md): `client.offline` (`retryable: true`), `client.cancelled`, `client.storage_failed`. Không mượn `unavailable`/`timeout` — hai mã đó nghĩa là server có vấn đề, làm hỏng dashboard và nhắm sai retry.
+- Bound method đẩy thay đổi local lên server (`SyncNow`) **bắt buộc gửi `Idempotency-Key`** theo Tier 2: client tự retry POST, server không kiểm soát được nhịp retry của client.
+- `SyncNow` retry sau khi mất mạng **KHÔNG** được tự phát lại POST tạo mới nếu request không có `Idempotency-Key` — `retryable: true` nói lỗi có tính tạm thời, không phải giấy phép phát lại request (chuẩn section 6.1b); không có key thì chờ người dùng bấm lại.

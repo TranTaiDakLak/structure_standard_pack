@@ -17,6 +17,8 @@
 - Test tối thiểu component/logic quan trọng và e2e cho flow chính.
 - Build output `dist/` luôn gitignore; deploy target static/nginx/container phải rõ.
 - Khi `components/` thành thùng rác hoặc state rải khắp page, chuyển sang `structured.md`.
+- Vai consumer của [`03-standards/API_RESPONSE_CONTRACT.md`](../../../../03-standards/API_RESPONSE_CONTRACT.md) (contract `api-1`): một api client duy nhất, type mirror bảng `ErrorCode`, client tolerant với code/enum lạ; dùng TanStack Query thì retry theo `error.retryable`.
+- SSE dưới `/api/v1` consume bằng `fetch` + `ReadableStream`, không dùng `EventSource`; API bên thứ 3 gọi thẳng từ FE cần adapter riêng vì không tuân `api-1` — [appendix](../../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md) section 2.5 và 5.
 
 ## Ghi chú
 

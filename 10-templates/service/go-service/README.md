@@ -21,6 +21,9 @@
 - Config mẫu không chứa secret; runtime config nạp từ file/env theo deploy target.
 - Deploy phải nói rõ chạy bằng Docker, systemd, Windows Service, cron, hay Task Scheduler.
 - Health/metrics/admin endpoint nếu có chỉ là nội bộ và không làm đổi `delivery_type`.
+- Ràng buộc bởi [`03-standards/API_RESPONSE_CONTRACT.md`](../../../03-standards/API_RESPONSE_CONTRACT.md) (contract `api-1`) ở 2 mức. **Mức 1 — hợp đồng với hệ thống chạy service:** `/healthz` + `/readyz` đúng hình dạng khi service có HTTP surface; job chạy một lần rồi thoát thì miễn HTTP và lấy **exit code** làm contract (`0` = mọi bước bắt buộc hoàn tất, `!= 0` = cần người can thiệp), danh sách bước bắt buộc / best-effort khai trong `docs/` — [appendix](../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md) section 2.3. `trace_id` của lần chạy là `run_id` sinh lúc bắt đầu, persist cùng bản ghi (appendix section 2.0).
+- **Mức 2 — vai consumer, áp cho mọi service:** gọi API tự khai `contract: api-1` thì đọc `error.code` + `error.retryable`; gọi API bên thứ 3 thì **HTTP status code + header `Retry-After` mới là nguồn sự thật**, mỗi upstream một adapter riêng map về taxonomy của mình — [appendix](../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md) section 2.5.
+- Endpoint HTTP nội bộ nếu có (admin, trigger) thì áp toàn bộ contract như một API thật.
 
 ## Ghi chú
 

@@ -12,6 +12,7 @@
 ```text
 <product-name>/
 ├── docs/                              # tài liệu chung của product
+│   ├── api-contract.md                # contract api-1, bảng domain error code, endpoint ngoại lệ
 │   ├── architecture.md                # danh sách module, ai gọi ai, schema mỗi module sở hữu
 │   ├── runbook.md                     # vận hành: deploy, rollback, backup/restore, log, port
 │   └── server-registration.md         # project name, domain, port, network, scale profile
@@ -35,18 +36,20 @@
 │   │   │   ├── api/main.go            # composition root: mount tất cả service module + start HTTP
 │   │   │   └── worker/main.go         # (optional) chạy background cho các module
 │   │   ├── platform/                  # cross-cutting dùng chung mọi module
-│   │   │   ├── db/                     # kết nối DB pool
-│   │   │   ├── httpserver/             # router gốc, middleware chung, /healthz /readyz
-│   │   │   ├── logger/                 # JSON logger + request id
-│   │   │   └── config/                 # load + struct config
+│   │   │   ├── db/                    # kết nối DB pool
+│   │   │   ├── httpserver/            # router gốc, middleware chung, /healthz /readyz
+│   │   │   ├── httpresponse/          # JSON writer + nửa status của bảng mã lỗi
+│   │   │   ├── logger/                # JSON logger + request id
+│   │   │   └── config/                # load + struct config
+│   │   ├── shared/                    # errors.go (Code, AppError, nửa retryable), pagination — KHÔNG chạm HTTP
 │   │   ├── services/                  # ⭐ mỗi sub-folder = 1 bounded context
 │   │   │   ├── identity/
-│   │   │   │   ├── handler.go          # HTTP handler của module (đăng ký route)
-│   │   │   │   ├── service.go          # business logic của module
-│   │   │   │   ├── repository.go       # truy cập bảng/schema của module này
-│   │   │   │   ├── model.go            # struct domain của module
-│   │   │   │   └── port.go             # interface module này EXPORT cho module khác dùng
-│   │   │   ├── billing/                # cấu trúc giống identity/
+│   │   │   │   ├── handler.go         # HTTP handler của module (đăng ký route)
+│   │   │   │   ├── service.go         # business logic của module
+│   │   │   │   ├── repository.go      # truy cập bảng/schema của module này
+│   │   │   │   ├── model.go           # struct domain của module
+│   │   │   │   └── port.go            # interface module này EXPORT cho module khác dùng
+│   │   │   ├── billing/               # cấu trúc giống identity/
 │   │   │   └── catalog/
 │   │   ├── migrations/                # SQL migrations (đặt tên có prefix module: 001_identity_*)
 │   │   ├── config/                    # config mẫu (config.example.yaml)
@@ -82,6 +85,8 @@
 
 - `apps/api/cmd/api/main.go`: composition root — load config, init `platform/`, gọi từng module để đăng ký route vào router gốc, start server, handle signal. KHÔNG chứa business logic.
 - `apps/api/platform/`: code không thuộc nghiệp vụ module nào — db pool, router gốc, middleware, logger, config. Mọi module nhận dependency từ đây.
+- `apps/api/platform/httpresponse/`: JSON writer duy nhất của repo + nửa `status` của bảng mã lỗi — mọi module ghi response qua đây, KHÔNG mỗi module một writer.
+- `apps/api/shared/`: kiểu dùng chung thuần, không nghiệp vụ — `errors.go` (`Code`, `AppError`, nửa `retryable`) và pagination. Mọi module import được vì nó KHÔNG chạm HTTP. Tiết chế, không thành thùng rác.
 - `apps/api/services/<module>/`: 1 bounded context. `handler.go` đăng ký route; `service.go` chứa nghiệp vụ; `repository.go` chỉ chạm bảng/schema của chính module; `port.go` khai báo interface mà module export cho module khác.
 - `apps/api/services/<module>/port.go`: chỗ duy nhất module khác được phép phụ thuộc. Module A gọi B qua `billing.Port`, KHÔNG import `billing/repository.go`.
 - `apps/api/migrations/`: SQL migration chung 1 DB; đặt tên prefix theo module để biết bảng thuộc ai (`001_identity_users.sql`).
@@ -116,6 +121,24 @@ Không có worker mặc định. Khi 1 module cần background (consume queue, s
 - CORS/CSRF/rate limit cấu hình theo domain thật, không wildcard production.
 - Khi deploy Linux nhiều dự án: cập nhật `PORT-REGISTRY.md` + `DOMAIN-REGISTRY.md`; app/API/web mặc định `expose`, không bind host port; shared PostgreSQL/Redis với DB user + Redis prefix riêng cho scale `shared`.
 - Chưa cần monorepo tool (turborepo, nx). 1 `go.mod` + `package.json` per Vue app là đủ.
+
+## API response contract
+
+Theo [`03-standards/API_RESPONSE_CONTRACT.md`](../../../../03-standards/API_RESPONSE_CONTRACT.md), contract `api-1` — không tự chế hình dạng response, không tự chế bảng mã lỗi.
+
+- Response helper + writer: `apps/api/platform/httpresponse/` — nằm cạnh `httpserver/` và `logger/`, là cross-cutting nên thuộc `platform/`, không thuộc module nào. CHỈ JSON writer + nửa `status` của bảng mã.
+- File khai báo error code, đúng 1 file cho cả repo: `apps/api/shared/errors.go` — `Code`, `AppError`, và nửa `retryable`. Đặt ở `shared/` chứ không ở `httpresponse/` vì `services/<module>/service.go` phải trả domain code; bắt nó import package HTTP là business logic import HTTP adapter, đúng thứ chuẩn section 6.1 và 6.4 cấm.
+- Bảng mã tách 2 nửa theo chuẩn section 6.1: `retryable(code) bool` ở `apps/api/shared/errors.go` — "lỗi này có tạm thời không" là câu hỏi nghiệp vụ mà `service.go` và worker phải trả lời được khi không biết HTTP; `status(code) int` ở `platform/httpresponse/` cùng writer, vì status chỉ là phép chiếu sang một transport. Mỗi nửa đúng 1 bảng cho cả repo, KHÔNG mỗi module một bảng.
+- Exception/recover middleware toàn cục: `apps/api/platform/httpserver/` — recover panic, catch-all 404/405, gắn vào router gốc **trước khi** `cmd/api/main.go` gọi module đăng ký route.
+- **Rule cứng 1 (không phải gợi ý)**: mọi module ghi response qua ĐÚNG MỘT helper `httpresponse`; `handler.go` của module cấm tự `json.Marshal` rồi ghi thẳng vào `http.ResponseWriter`. Đây là bản cụ thể hoá của rule "module chỉ phụ thuộc nhau qua `port.go`" — hình dạng response là contract chung của repo, không phải việc riêng của module. `/readyz` (rule sẵn có) là ngoại lệ tường minh: khi fail vẫn trả 503 nhưng body giữ hình dạng health ở [appendix](../../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md) section 1.6 — `{"status":"degraded","checks":{...}}` — không plain text, và cũng KHÔNG bọc `{"error":{...}}` vì bọc là mất thông tin check nào đang chết. Mã `not_ready`/`unavailable` dành cho endpoint nghiệp vụ khi đang deploy hoặc dependency chết, không dành cho probe.
+- **Rule cứng 2 (không phải gợi ý)**: bắt buộc 1 integration test smoke duyệt MỌI route đã mount ở `cmd/api/main.go` — một request lỗi cố ý assert body có đủ `error.code` + `error.trace_id`, **và một request tới route list assert body có đúng 2 khóa `items` + `page`**. Nhánh list là chỗ duy nhất test này chạm success; thiếu nó thì drift hình dạng success không ai bắt được (chuẩn section 13). Test rẻ và bắt được drift ngay lần thêm module mới đầu tiên.
+- **List tổng hợp lọc theo dữ liệu module khác** (`GET /api/v1/orders?payment_status=...`) có 2 đường hợp lệ theo chuẩn section 8.2, chọn 1: (a) khai endpoint trong `docs/api-contract.md` là endpoint tổng hợp, **miễn `total`**, nhưng phải có trần cứng cho `limit` và trả 400 `bad_request` khi client xin vượt trần; (b) dựng **read model read-only** do đúng 1 module sở hữu, khai chủ sở hữu trong `docs/architecture.md`, cập nhật qua event của module nguồn. Read model đọc chéo là hợp lệ — thứ rule module cấm là **ghi** chéo và **join trực tiếp bảng nghiệp vụ** của module khác. List của một module vẫn bắt buộc `total`.
+- Domain error code đặt `<module>.<reason>`, `<module>` KHỚP ĐÚNG tên folder trong `services/`: `identity.token_expired`, `billing.already_paid`. Đọc mã lỗi là biết ngay chủ sở hữu.
+- **Mỗi domain code phải có entry ở CẢ HAI nửa bảng** — `retryable` ở `shared/errors.go`, `status` ở `platform/httpresponse/` (chuẩn section 6.2). `billing` trả `billing.already_paid`; `catalog` gọi qua `billing/port.go` và cho lỗi đó đi ra qua handler của chính mình, status vẫn tra từ đúng bảng chung. KHÔNG module nào tự chọn status — thiếu entry là cùng một mã ra 409 ở handler này, 422 ở handler kia.
+- `docs/api-contract.md`: contract version, bảng domain error code, danh sách endpoint ngoại lệ.
+- Code Go tham chiếu (bảng 17 mã, writer, middleware, wiring 404/405 của `chi`, bẫy DTO, PATCH null-vs-absent): [`03-standards/snippets/go-api-contract.md`](../../../../03-standards/snippets/go-api-contract.md) — copy section 1 vào `apps/api/shared/errors.go`, section 2–3 (writer + request id/recover) vào `apps/api/platform/httpresponse/`, section 4 (wiring 404/405) áp ở `platform/httpserver/` nơi dựng router gốc; đổi `package` cho khớp folder, không import chung.
+
+Không đẻ layer mới cho việc này — mọi path trên đều nằm trong cây thư mục ở trên.
 
 ## Khi nào nâng lên `structured.md`
 

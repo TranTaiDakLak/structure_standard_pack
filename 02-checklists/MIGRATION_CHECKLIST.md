@@ -19,6 +19,7 @@
 - [ ] deploy files có đang nằm sai chỗ không
 - [ ] config mẫu có lẫn secret thật không
 - [ ] build artifacts có đang bị commit không
+- [ ] nếu repo có API: hiện đang trả response theo mấy kiểu khác nhau, mã lỗi rải rác ở đâu, có endpoint nào trả `200` kèm `success: false` không
 
 ## 3. Dọn root trước
 
@@ -48,6 +49,59 @@
 - [ ] tạo folder structured đích
 - [ ] move trước, rewrite sau
 - [ ] tách rõ entrypoint / business / integration
+
+## 5b. Nếu repo có API — áp response contract
+
+Làm **sau** khi cấu trúc đã ổn, không trộn vào cùng đợt move folder. Theo [`03-standards/API_RESPONSE_CONTRACT.md`](../03-standards/API_RESPONSE_CONTRACT.md).
+
+**Trả lời câu này trước mọi thứ khác: API có consumer ngoài repo không?** Nó quyết định toàn bộ chiến lược migrate, không phải chi tiết chốt sau.
+
+- [ ] liệt kê mọi caller thật: FE trong repo, app mobile đã phát hành, đối tác tích hợp, script/cron của khách, extension đã publish
+- [ ] đối chiếu bằng access log (user-agent, client version, api key), không hỏi miệng
+- [ ] không chắc → coi như **CÓ** consumer ngoài repo
+- [ ] chốt nhánh: chỉ có client trong repo → **nhánh A**; có client ngoài repo → **nhánh B**
+
+### Việc chung cho cả hai nhánh
+
+Khối này dựng nền, chưa đổi status của endpoint nào đang chạy.
+
+- [ ] tạo helper response + writer ở đúng folder của template (xem appendix section 3), chưa sửa handler nào
+- [ ] gom toàn bộ mã lỗi đang rải rác về đúng 1 file khai báo
+- [ ] đăng ký exception/recover middleware toàn cục, trả 500 với `message` cố định
+- [ ] xử lý bẫy framework: `.NET` tắt auto `ProblemDetails` + set `SnakeCaseLower`; `FastAPI` override `HTTPException` và `RequestValidationError`; `Express` error middleware đăng ký cuối cùng + catch-all 404 trả JSON
+- [ ] thêm `X-Request-Id` trên mọi response và nối vào log
+- [ ] viết `docs/api-contract.md`: contract version, bảng domain error code, danh sách endpoint ngoại lệ
+
+**Bốn món kiểm được bằng máy** — section 13 của chuẩn gọi đây là thứ duy nhất biến chuẩn từ lời khuyên thành ràng buộc kiểm được. **Phạm vi: áp cho surface đang được đưa về chuẩn.** Nhánh A là toàn bộ API. Nhánh B **chỉ `/api/v2`** — nhánh B cấm đụng `/api/v1`, nên smoke test duyệt route sẽ đỏ trên v1 theo đúng thiết kế; giới hạn test theo prefix, không nới luật. Dựng ngay ở khối chung, nhưng chỉ xanh hết khi surface trong scope đã đổi xong.
+
+- [ ] **ràng buộc compile-time cho `code`**: khai kiểu riêng (`type Code string` ở Go, `StrEnum` ở Python, union `as const` ở TS, `const string` trong static class ở C#) và ép writer chỉ nhận kiểu đó; repo JS thuần thay bằng một test grep
+- [ ] **Test 1** — table-driven test cho bảng mã, phủ đủ 17 mã reserved **và mọi domain code**; bảng tách 2 nửa theo section 6.1 thì test cả `retryable` ở tầng domain lẫn `status` ở package writer
+- [ ] **Test 2** — smoke test duyệt mọi route đã mount trong scope: một request lỗi cố ý assert body có `error.code` + `error.trace_id`; một request list assert body có đúng 2 khóa `items` + `page`
+- [ ] **Test 3** — test e2e cố ý gây panic rồi assert body không chứa chuỗi nào của stack trace
+
+### Nhánh A — mọi client nằm trong repo
+
+Đổi tại chỗ được vì client deploy cùng lúc với backend. Giữ đúng thứ tự:
+
+- [ ] đổi từng nhóm endpoint sang shape mới, mỗi nhóm 1 commit — **không** đổi cả API trong 1 PR
+- [ ] endpoint đang trả `200` kèm `success: false` phải đổi status trước, đổi body sau
+- [ ] FE cập nhật api client theo đúng thứ tự: interceptor mới chịu được cả 2 shape → backend đổi → gỡ nhánh cũ ở FE
+
+### Nhánh B — có client ngoài repo (mobile đã phát hành, đối tác)
+
+**CẤM đổi status tại chỗ.** Dòng "đổi status trước" của nhánh A không áp ở đây: bản vá không tới được máy người dùng, đổi status là app ngoài thị trường gãy ngay. `/api/v1` giữ nguyên trạng, kể cả endpoint đang trả `200` kèm `success: false`.
+
+- [ ] xác nhận **có kênh ép nâng cấp client cũ**: force-update trên store, chặn version cũ ngay trong app, hoặc điều khoản hợp đồng với đối tác
+- [ ] xác nhận **server log được version client** mỗi request (user-agent, header version, api key theo đối tác) — chưa có thì thêm log này trước
+- [ ] thiếu một trong hai → `/api/v1` sẽ sống vĩnh viễn và bạn gánh 2 API mãi mãi. Chốt chấp nhận hay không **ở đây**, trước khi dựng surface mới
+- [ ] dựng `/api/v2` song song, dùng chung helper + file mã lỗi ở khối chung; `/api/v1` không đụng vào
+- [ ] endpoint mới chỉ mọc ở v2, không thêm gì vào v1
+- [ ] v2 áp đủ nghĩa vụ của API có consumer ngoài repo: `user_message` + OpenAPI (Tier 1), `Idempotency-Key` cho POST đụng tiền/kho (Tier 2, appendix section 1.13)
+- [ ] đo traffic theo version client, có số liệu theo ngày — đây là căn cứ duy nhất để retire
+- [ ] đặt mốc sunset cho `/api/v1`, ghi vào `docs/api-contract.md` và CHANGELOG
+- [ ] bật header `Deprecation: true` + `Sunset: <http-date>` trên mọi response của v1, nhớ `Access-Control-Expose-Headers`
+- [ ] thông báo đối tác bằng văn bản: mốc sunset, diff v1 → v2, thời hạn phải chuyển xong
+- [ ] chỉ retire `/api/v1` khi **đo được** không còn traffic, không retire theo lịch suông
 
 ## 6. Chiến lược commit
 

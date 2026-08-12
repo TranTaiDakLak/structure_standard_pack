@@ -58,3 +58,17 @@
 - Config dùng `.env.example` và biến `VITE_*`; không hardcode endpoint production.
 - Unit test feature/composable/store; e2e cho flow chính; build output luôn gitignore.
 - Nếu feature layer chỉ là folder rỗng, quay lại `simple.md`.
+
+## API response contract
+
+Consumer của [`03-standards/API_RESPONSE_CONTRACT.md`](../../../../03-standards/API_RESPONSE_CONTRACT.md), contract `api-1`.
+
+- Api client duy nhất: `src/services/http.ts` — mọi request đi qua đây, cấm gọi `fetch`/`axios` rải rác trong component; api riêng của feature bọc lại client này, không tự mở kết nối.
+- Gọi thẳng API bên thứ 3 (map, payment SDK, analytics) thì API đó KHÔNG tuân `api-1`: mỗi upstream một adapter riêng trong `src/services/`, cấm dùng chung `http.ts` và cấm duck-type `body.error` — [appendix](../../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md) section 2.5.
+- Type mirror: `src/types/api.ts` — union `ErrorCode` khai lại đúng bảng code của backend, để TS bắt được `switch` thiếu case. Nguồn là `docs/api-contract.md` của repo backend (section 11 của chuẩn), không hỏi miệng; backend thêm code mới thì cập nhật mirror theo file đó.
+- `204` phải map thành `undefined` TRƯỚC khi thử `res.json()` — gọi `.json()` trên body rỗng sẽ throw. Timeout riêng bằng `AbortController`, ngắn hơn timeout của reverse proxy.
+- File download và stream dùng `download()` / `stream()` ở [appendix](../../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md) section 5, đặt cạnh `api()` trong cùng file client. `download()` phải kiểm `res.ok` TRƯỚC khi đọc blob, nếu không sẽ lưu ra file chứa JSON lỗi.
+- SSE/NDJSON dưới `/api/v1` consume bằng `fetch` + `ReadableStream` (hàm `stream()`), CẤM `EventSource` — nó không gắn được header `Authorization` (buộc nhét token vào query, rò vào access log) và không đọc được body lỗi.
+- Client phải TOLERANT: gặp `error.code` lạ hoặc enum value lạ thì fallback theo status class, không crash. Backend thêm code mới là non-breaking, và điều đó chỉ đúng nếu client chịu được.
+- Thứ tự fallback message hiển thị là **cố định** — dùng đúng chuỗi ở section 9.2 của chuẩn, không tự chế thứ tự khác.
+- Cấm parse `error.message` để đoán loại lỗi — luôn `switch` trên `error.code`.

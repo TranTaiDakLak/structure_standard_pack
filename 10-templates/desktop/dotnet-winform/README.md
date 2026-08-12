@@ -18,6 +18,8 @@
 - Config mẫu, installer script, sidecar binary nếu có phải tách khỏi source chính.
 - Test tập trung vào Presenter/Application/Domain; không cố test Form Designer trực tiếp nếu không cần.
 - Release desktop phải có version, publish output, installer config, và ghi chú rollback/cài lại.
+- App ở **vai consumer** của [`03-standards/API_RESPONSE_CONTRACT.md`](../../../03-standards/API_RESPONSE_CONTRACT.md) (contract `api-1`): gọi API ngoài thì parse `error.code` / `retryable` / `trace_id` tại đúng một chỗ, không rải `HttpClient` trong `Forms`/`Presenters`.
+- Mỗi upstream **không tuân `api-1`** (partner API, sidecar exe, hệ thống nội bộ cũ) có adapter riêng đặt cùng chỗ với http client — `Services/` ở simple, `.Infrastructure` ở structured ([appendix section 2.5](../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md)); lỗi phía máy người dùng (offline, user huỷ) dùng nhóm `client.*` ([appendix section 2.0b](../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md)), không mượn `unavailable`/`timeout`.
 - Nếu Form tăng nhanh hoặc nhiều integration ngoài, nâng sang `structured.md` trước khi logic dính vào UI.
 
 ## Ghi chú

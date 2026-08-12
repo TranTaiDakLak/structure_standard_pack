@@ -13,6 +13,7 @@
 ```text
 <product-name>/
 ├── docs/                                  # tài liệu chung
+│   ├── api-contract.md                    # contract api-1, bảng domain error code, endpoint ngoại lệ
 │   ├── architecture.md                    # quyết định kiến trúc chính, boundary app
 │   ├── runbook.md                         # start/stop, deploy, rollback, backup/restore
 │   ├── server-registration.md             # project name, domain, port, network, scale profile
@@ -42,7 +43,7 @@
 │   │   │   └── worker/main.go             # entrypoint worker — wiring + signal
 │   │   ├── internal/
 │   │   │   ├── app/                       # bootstrap (DI, config, logger) — share api+worker
-│   │   │   ├── domain/                    # entity + rule cốt lõi
+│   │   │   ├── domain/                    # entity + rule cốt lõi + errors.go (Code, AppError, nửa retryable)
 │   │   │   ├── usecase/                   # application flow — share api+worker
 │   │   │   ├── adapter/                   # hexagonal — cổng ra ngoài
 │   │   │   │   ├── http/                  # handler, middleware — binary api dùng
@@ -51,6 +52,7 @@
 │   │   │   │   ├── messaging/             # queue consumer/producer — chủ yếu worker
 │   │   │   │   └── external/              # client gọi service ngoài
 │   │   │   ├── platform/                  # logging, metrics, tracing, clock, id generator
+│   │   │   │   └── httpx/                 # response writer JSON + nửa status (code khai ở domain/)
 │   │   │   ├── worker/                    # long-running loop, gọi usecase
 │   │   │   ├── job/                       # scheduled job (robfig/cron)
 │   │   │   └── config/                    # struct config + loader
@@ -100,12 +102,13 @@
 - `apps/api/cmd/api/main.go`: parse config, init logger, build DI từ `internal/app`, register routes từ `adapter/http`, start server, handle signal.
 - `apps/api/cmd/worker/main.go`: parse config, init logger, build DI từ `internal/app`, register worker + job, start, handle `SIGTERM` → cancel → `wg.Wait()` → exit.
 - `internal/app/`: factory dependency — share giữa 2 binary. 1 `NewContainer(cfg)` trả về tập DB pool, repo, usecase. `main.go` chỉ pick cái cần.
-- `internal/domain/`: entity, value object, rule thuần. KHÔNG import framework.
+- `internal/domain/`: entity, value object, rule thuần. KHÔNG import framework. `errors.go` giữ `Code`, `AppError`, và nửa `retryable` của bảng mã cho cả repo — KHÔNG chứa HTTP status, giữ đúng rule "`domain` KHÔNG biết HTTP".
 - `internal/usecase/`: định nghĩa interface cho adapter; adapter implement ngược. **Đây là chỗ share thật giữa api và worker.**
 - `internal/adapter/http/`: chỉ binary `api` import.
 - `internal/adapter/http/health/`: endpoint `/healthz` chỉ kiểm tra process sống; `/readyz` kiểm tra DB/queue dependency; `/metrics` chỉ bật khi có hệ thống scrape.
 - `internal/adapter/messaging/`: chủ yếu binary `worker`. API có thể publish event qua đây.
 - `internal/platform/`: cross-cutting code không thuộc domain như logger, metrics, tracing, request id, clock; inject qua `internal/app`.
+- `internal/platform/httpx/`: response writer JSON (success, error, list `{items, page}`) + nửa `status` của bảng mã — mã lỗi vẫn khai ở `internal/domain/errors.go`, không khai lại ở đây.
 - `internal/worker/` + `internal/job/`: orchestrate `usecase`, KHÔNG chứa business logic.
 - `migrations/`: SQL migrations dùng chung 2 binary — apply 1 lần qua `scripts/` hoặc init job, KHÔNG để binary tự migrate khi start.
 - `infra/compose/prod.yml`: source of truth cho production khi product có nhiều app; app-level compose chỉ dùng cho smoke test hoặc deploy tách rời.
@@ -139,3 +142,19 @@
 - Backup script đụng cả `apps/api/storage/` và DB dump. Backup phải có retention, checksum, và restore drill định kỳ.
 - Đừng tạo package con quá vụn. Structured để dễ tìm code, không phải để đẹp chuẩn.
 - Nếu worker khác hẳn API về domain, không còn share `usecase` → cân nhắc tách repo riêng dùng `service/go-service`.
+
+## API response contract
+
+Theo [`03-standards/API_RESPONSE_CONTRACT.md`](../../../../03-standards/API_RESPONSE_CONTRACT.md), contract `api-1` — không tự chế hình dạng response, không tự chế bảng mã lỗi.
+
+- Response helper + writer: `apps/api/internal/platform/httpx/` — khớp rule sẵn có "cross-cutting đặt dưới `internal/platform/`", JSON writer + nửa `status` của bảng mã, inject xuống handler qua `internal/app`.
+- File khai báo error code, đúng 1 file cho cả repo: `apps/api/internal/domain/errors.go` — `Code`, `AppError`, và nửa `retryable`. Đặt ở `domain` để `usecase`/`worker` rẽ nhánh theo code mà không import ngược `adapter`/`platform` (chuẩn section 6.4); KHÔNG import `net/http`.
+- Bảng mã tách 2 nửa theo chuẩn section 6.1: `retryable(code) bool` ở `internal/domain/errors.go` — "lỗi này có tạm thời không" là câu hỏi nghiệp vụ mà `usecase`/`worker` phải trả lời được khi không biết HTTP; `status(code) int` ở `internal/platform/httpx/` cùng writer, vì status chỉ là phép chiếu sang một transport. Cả 2 nửa là pure function, table-driven test được; mỗi domain code phải có entry ở **cả hai**.
+- Exception/recover middleware toàn cục: `apps/api/internal/adapter/http/` — recover panic, catch-all 404/405, dùng writer của `httpx` để trả JSON envelope.
+- Mọi handler ghi response qua `httpx` — cấm ghi thẳng `http.ResponseWriter` hay `json.NewEncoder(w).Encode(...)` trong `adapter/http/`. `domain` và `usecase` trả typed error, chỉ tầng HTTP mới tra nửa `status` ở `httpx` để gắn HTTP status.
+- Reverse proxy `infra/nginx/`: override 413/502/504 thành JSON envelope kèm `$request_id` + `add_header X-Request-Id $request_id always`; `client_max_body_size` khớp giới hạn upload app khai; `proxy_read_timeout` lớn hơn deadline server-side của app; route SSE thêm `proxy_buffering off`. Chi tiết ở [appendix](../../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md) section 4, hàng reverse proxy.
+- FE: api client ở `apps/admin-web/src/services/http.ts` (đọc `X-Request-Id`, unwrap `error`), union type `ErrorCode` ở `apps/admin-web/src/types/api.ts`. Có `client-web` thì **cả 2 FE app dùng chung một union type `ErrorCode`** — bản copy giữa 2 app phải giữ đồng bộ, lệch một mã là một app rẽ nhánh sai.
+- `docs/api-contract.md`: contract version, bảng domain error code, danh sách endpoint ngoại lệ.
+- Code Go tham chiếu (bảng 17 mã, writer, middleware, wiring 404/405 của `chi`, bẫy DTO, PATCH null-vs-absent): [`03-standards/snippets/go-api-contract.md`](../../../../03-standards/snippets/go-api-contract.md) — copy section 1 (`Code`, `AppError`, `Retryable()`) vào `internal/domain/errors.go`, section 2–3 (writer + `statusTable` + request id/recover) vào `internal/platform/httpx/`, section 4 (wiring 404/405) áp ở `internal/adapter/http/`; đổi `package` cho khớp folder, không import chung.
+
+Không đẻ layer mới cho việc này — mọi path trên đều nằm trong cây thư mục ở trên.

@@ -4,6 +4,7 @@ Prompt này dùng được với Claude Code, Codex, ChatGPT, hoặc AI coding a
 - `00-core/STRUCTURE_STANDARD_CORE.md`
 - `00-core/TEMPLATE_LIBRARY_INDEX.md`
 - thư mục template tương ứng trong `10-templates/`
+- nếu dự án có HTTP API: `03-standards/API_RESPONSE_CONTRACT.md`
 - nếu deploy lên Linux server nhiều dự án: `02-checklists/PROJECT_REGISTRATION_CHECKLIST.md`
 
 ---
@@ -17,6 +18,7 @@ Tôi sẽ cung cấp:
 2. file `STRUCTURE_STANDARD_CORE.md`
 3. file `TEMPLATE_LIBRARY_INDEX.md`
 4. một hoặc nhiều thư mục template liên quan
+5. nếu dự án có HTTP API: file `03-standards/API_RESPONSE_CONTRACT.md`
 
 Nhiệm vụ của bạn là:
 - đọc chuẩn lõi
@@ -43,6 +45,7 @@ Nhiệm vụ của bạn là:
 10. Nếu dùng shared PostgreSQL/Redis, phải yêu cầu DB/user riêng và Redis key prefix riêng cho từng project.
 11. Không thêm folder "để dành"; folder nào xuất hiện trong cây thư mục phải có trách nhiệm rõ.
 12. Nếu đề xuất production layout, phải nêu tối thiểu config/secret, test, deploy, healthcheck/log/backup tương ứng với stack.
+13. Nếu dự án có HTTP API, phải áp `03-standards/API_RESPONSE_CONTRACT.md` — không tự chế hình dạng response, không tự chế bảng mã lỗi. Chỉ ra folder nào trong cây vừa chọn sẽ chứa response helper và file khai báo error code; không đẻ layer mới cho việc này.
 
 ## Việc cần làm
 
@@ -57,9 +60,10 @@ Nhiệm vụ của bạn là:
 3. Xuất cây thư mục cuối cùng
 4. Giải thích ngắn vai trò các folder chính
 5. Nếu là repo cũ, đưa migration plan ngắn gọn
-6. Nếu deploy Linux nhiều dự án, xuất server registration requirements
-7. Nêu assumptions
-8. Nêu risks/follow-ups
+6. Nếu dự án có HTTP API, xuất API response contract requirements
+7. Nếu deploy Linux nhiều dự án, xuất server registration requirements
+8. Nêu assumptions
+9. Nêu risks/follow-ups
 
 ## Định dạng output bắt buộc
 
@@ -72,9 +76,22 @@ Không dùng emoji trong heading để output dễ copy vào issue/PR/runbook.
 5. `Folder responsibilities`
 6. `Operational baseline`
 7. `Migration notes`
-8. `Server registration requirements` (nếu deploy Linux nhiều dự án)
-9. `Assumptions`
-10. `Risks & follow-ups`
+8. `API response contract` (nếu dự án có HTTP API)
+9. `Server registration requirements` (nếu deploy Linux nhiều dự án)
+10. `Assumptions`
+11. `Risks & follow-ups`
+
+## API response contract
+
+Nếu dự án có HTTP API, section này phải có:
+
+- Contract version áp dụng: `api-1` (theo `03-standards/API_RESPONSE_CONTRACT.md`)
+- Folder chứa response helper + writer, chọn từ cây thư mục vừa xuất — không đẻ folder mới
+- File khai báo error code (đúng 1 file cho cả repo) và đường dẫn của nó
+- Nơi đăng ký exception/recover middleware toàn cục
+- Bẫy framework phải xử lý ngay từ đầu: `.NET` phải tắt auto `ProblemDetails` và set `JsonNamingPolicy.SnakeCaseLower`; `FastAPI` phải override cả `HTTPException` lẫn `RequestValidationError`; `Express` phải đăng ký error middleware cuối cùng cộng catch-all 404 trả JSON
+- Ngoại lệ của dự án nếu có: endpoint dùng cursor pagination, batch non-atomic, bounded collection không phân trang, webhook receiver, endpoint trả non-JSON
+- Nhắc tạo `docs/api-contract.md` trong repo dự án
 
 ## Server registration requirements
 
@@ -100,4 +117,5 @@ Trước khi trả lời cuối cùng, tự kiểm tra:
 - Có tránh enterprise hóa nếu input chỉ là MVP/tool nhỏ không?
 - Có nêu đường nâng cấp khi dự án phình không?
 - Có tách rõ source, config, scripts, infra, tests không?
+- Nếu dự án có API, đã chỉ đúng folder chứa response helper và file error code trong cây vừa xuất chưa, hay lại đẻ layer mới?
 - Có nêu rủi ro còn thiếu thông tin thay vì giả vờ chắc chắn không?

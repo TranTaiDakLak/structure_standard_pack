@@ -28,6 +28,7 @@ Mục tiêu là tránh trùng port, loạn domain, public nhầm DB/cache, thi�
 | Server | `scale_profile` | `shared`, `dedicated`, `isolated` | Có |
 | Domain | `domains` | `mail.example.com` | Nếu public |
 | Service | `services` | `api`, `web`, `worker` | Có |
+| API | `api_contract` | `api-1` + `/api/v1`; đang migrate thì ghi cả `/api/v1` + `/api/v2` | Nếu có API |
 | Network | `networks` | `public`, `internal`, `data` | Có |
 | Port | `container_ports` | `api:8080`, `web:80` | Có |
 | Port | `host_ports` | `none`, `127.0.0.1:18100` | Có |
@@ -36,9 +37,11 @@ Mục tiêu là tránh trùng port, loạn domain, public nhầm DB/cache, thi�
 | Storage | `storage_paths` | `/app/storage/uploads` | Nếu có file runtime |
 | Backup | `backup_scope` | `db`, `storage`, `config`, `compose` | Có |
 | Resource | `resource_limits` | `api: 512m/0.50 cpu` | Có |
-| Ops | `healthcheck` | `/healthz`, `/readyz` | Có |
+| Ops | `healthcheck` | `/healthz`, `/readyz` — service không có HTTP surface (cron, one-shot) dùng healthcheck command hoặc exit code | Có |
 | Ops | `log_path` | `/opt/logs/apps/mail-app` | Có |
 | Security | `secret_source` | `.env on server`, vault | Có |
+
+`api_contract` ghi contract version của pack (`api-1`, xem [`03-standards/API_RESPONSE_CONTRACT.md`](../03-standards/API_RESPONSE_CONTRACT.md) section 11) kèm prefix đang phục vụ. Repo đang chạy nhánh B của [`MIGRATION_CHECKLIST.md`](MIGRATION_CHECKLIST.md) khai cả hai prefix cho tới khi retire xong v1.
 
 ---
 
@@ -199,6 +202,16 @@ Khi AI hoặc người tạo project mới, output tối thiểu phải có:
 - [ ] Có backup scope rõ.
 - [ ] Không còn secret placeholder như `change_me`.
 - [ ] `docker compose config` chạy OK.
+
+### Nếu project có API — phần nằm ngoài repo
+
+Tier 0 luật 2 của [`03-standards/API_RESPONSE_CONTRACT.md`](../03-standards/API_RESPONSE_CONTRACT.md) bắt tầng trước app cũng trả JSON envelope, mà public traffic ở đây chỉ đi qua Caddy/Nginx dùng chung (mục 3 và 4). File quyết định việc này nằm **ngoài** repo dự án, nên không test nào trong repo bắt được — bỏ qua thì client ăn HTML lỗi.
+
+- [ ] Proxy đã override 413, 502, 504 thành JSON envelope, không còn trang lỗi HTML mặc định.
+- [ ] Proxy có `add_header X-Request-Id $request_id always` — thiếu `always` là header rụng trên đúng nhánh lỗi.
+- [ ] `client_max_body_size` khớp giới hạn upload app khai, `proxy_read_timeout` lớn hơn deadline server-side của app; endpoint SSE thêm `proxy_buffering off`.
+
+Ai sở hữu: cấu hình per-project (`sites/<project>.conf`) là của project, khai kèm trong `DOMAIN-REGISTRY.md`. Snippet `error_page` dùng chung ở tầng server là của người quản trị server — project phải **xác nhận nó đã có** rồi mới tick, không giả định.
 
 ## 8. Dấu hiệu cần nâng scale profile
 

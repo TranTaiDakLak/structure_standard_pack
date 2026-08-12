@@ -59,3 +59,14 @@
 - Presenter/Service phải có unit test cho nghiệp vụ quan trọng.
 - Installer config và sidecar nếu có phải có README/version rõ.
 - Config mẫu không chứa connection string hoặc secret thật.
+
+## API response contract
+
+Consumer của [`03-standards/API_RESPONSE_CONTRACT.md`](../../../03-standards/API_RESPONSE_CONTRACT.md), contract `api-1`. App không expose HTTP, nhưng khi gọi API ngoài thì:
+
+- Http client + deserialize error đặt ở `src/<AppName>/Services/`, không rải `HttpClient` trong `Forms/` hay `Presenters/`.
+- Map `error.code` sang thông báo hiển thị tại đúng một chỗ; `retryable` quyết định có retry hay không.
+- `error.trace_id` phải được hiện cho user ở dialog lỗi để gửi support, và ghi vào log local.
+- `JsonSerializerOptions` phải set `PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower`, nếu không sẽ deserialize hụt toàn bộ field.
+- Mỗi upstream **không tuân `api-1`** (partner API, sidecar exe, hệ thống nội bộ cũ) có một adapter riêng, đặt cùng chỗ với http client ở `src/<AppName>/Services/`: adapter quyết định thành công/thất bại theo luật của upstream rồi mới normalize về code của mình, cấm duck-type `body.error` — [appendix section 2.5](../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md).
+- Lỗi phía máy người dùng (mất mạng, user huỷ, ghi file local hỏng) dùng nhóm `client.*` ở [appendix section 2.0b](../../../03-standards/API_RESPONSE_CONTRACT_APPENDIX.md), không mượn `unavailable`/`timeout` vì hai mã đó nghĩa là server có vấn đề.
